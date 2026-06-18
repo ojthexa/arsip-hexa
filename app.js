@@ -10,9 +10,20 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const storage = firebase.storage();
+let db = null;
+let storage = null;
+
+try {
+  if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    storage = firebase.storage();
+  } else {
+    console.error("Firebase SDK tidak terdefinisi. Periksa koneksi internet atau pemblokir iklan.");
+  }
+} catch (e) {
+  console.error("Gagal menginisialisasi Firebase:", e.message);
+}
 
 // STATE GLOBAL
 let activePage = 'dashboard';
@@ -21,14 +32,13 @@ let cachedFormats = [];
 let currentSelectorTargetInput = null;
 
 // DOM ELEMENTS & INITIALIZATION
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   // Initialize Lucide Icons
-  lucide.createIcons();
+  try {
+    lucide.createIcons();
+  } catch(e) {}
 
-  // Initialize Default Data on Firebase if empty
-  await initializeFirebaseDb();
-
-  // Navigation Links
+  // Navigation Links - Didaftarkan pertama kali agar menu selalu berfungsi
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(item => {
     item.addEventListener('click', (e) => {
@@ -39,11 +49,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Setup Event Listeners
-  setupEventListeners();
+  try {
+    setupEventListeners();
+  } catch(e) {}
 
-  // Load Awal
+  // Load Awal Halaman
   switchPage('dashboard');
+
+  // Jalankan inisialisasi Firebase secara asinkron tanpa memblokir UI utama
+  if (db) {
+    initializeFirebaseAndLoad();
+  } else {
+    alert("Firebase SDK gagal dimuat. Periksa koneksi internet Anda atau matikan adblocker.");
+  }
 });
+
+async function initializeFirebaseAndLoad() {
+  try {
+    await initializeFirebaseDb();
+    loadDashboardData();
+  } catch (err) {
+    console.error("Gagal memuat data Firebase pada start-up:", err.message);
+  }
+}
+
 
 // INITIALIZE DEFAULT FIREBASE DATA
 async function initializeFirebaseDb() {
