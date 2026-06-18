@@ -1434,9 +1434,15 @@ async function runConnectionDiagnostics() {
   errorMsg.innerText = '-';
 
   let sdkOk = false;
-  let firestoreOk = false;
-  let cloudinaryOk = false;
   let errors = [];
+
+  // Helper Timeout
+  const timeoutPromise = (ms, promise, errMsg) => {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(errMsg)), ms))
+    ]);
+  };
 
   // 1. Test Firebase SDK
   try {
@@ -1455,41 +1461,49 @@ async function runConnectionDiagnostics() {
     errors.push("Gagal mengecek SDK: " + e.message);
   }
 
-  // 2. Test Firestore Connection
-  if (sdkOk && db) {
-    try {
-      const testRef = db.collection('diagnostic_test').doc('ping');
-      await testRef.set({ time: Date.now(), test: true });
-      const doc = await testRef.get();
-      if (doc.exists && doc.data().test) {
-        badgeFirestore.className = 'badge badge-status-accepted';
-        badgeFirestore.innerText = 'TERHUBUNG (OK)';
-        firestoreOk = true;
-        await testRef.delete();
-      } else {
-        throw new Error("Gagal memverifikasi dokumen uji.");
+  // Define test promises to run in parallel
+  const firestoreTest = async () => {
+    if (sdkOk && db) {
+      try {
+        const testRef = db.collection('diagnostic_test').doc('ping');
+        
+        // Wrap set and get in timeout
+        await timeoutPromise(6000, testRef.set({ time: Date.now(), test: true }), "Timeout (6 detik) - Server database Firestore tidak merespon.");
+        
+        const doc = await timeoutPromise(6000, testRef.get(), "Timeout (6 detik) - Gagal membaca dokumen uji.");
+        
+        if (doc.exists && doc.data().test) {
+          badgeFirestore.className = 'badge badge-status-accepted';
+          badgeFirestore.innerText = 'TERHUBUNG (OK)';
+          await testRef.delete().catch(() => {});
+        } else {
+          throw new Error("Data dokumen uji tidak valid.");
+        }
+      } catch(e) {
+        badgeFirestore.className = 'badge badge-status-rejected';
+        badgeFirestore.innerText = 'KONEKSI GAGAL';
+        errors.push("Eror Firestore: " + e.message + "\n--> Solusi: Buka Firebase Console -> Firestore Database -> Rules. Ubah baris 'allow read, write: if false;' menjadi 'allow read, write: if true;' lalu klik Publish. Pastikan juga Anda sudah mengklik 'Create Database' di Firebase Console.");
       }
-    } catch(e) {
+    } else {
       badgeFirestore.className = 'badge badge-status-rejected';
-      badgeFirestore.innerText = 'KONEKSI GAGAL';
-      errors.push("Eror Firestore: " + e.message + "\n--> Solusi: Buka Firebase Console -> Firestore Database -> Rules. Ubah baris 'allow read, write: if false;' menjadi 'allow read, write: if true;' lalu klik Publish.");
+      badgeFirestore.innerText = 'BATAL (SDK GAGAL)';
     }
-  } else {
-    badgeFirestore.className = 'badge badge-status-rejected';
-    badgeFirestore.innerText = 'BATAL (SDK GAGAL)';
-  }
+  };
 
-  // 3. Test Cloudinary Connection
-  try {
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/ping`, { method: 'GET', mode: 'no-cors' });
-    badgeCloudinary.className = 'badge badge-status-accepted';
-    badgeCloudinary.innerText = 'TERHUBUNG (OK)';
-    cloudinaryOk = true;
-  } catch(e) {
-    badgeCloudinary.className = 'badge badge-status-rejected';
-    badgeCloudinary.innerText = 'KONEKSI GAGAL';
-    errors.push("Eror Cloudinary: " + e.message + "\n--> Solusi: Periksa koneksi internet Anda atau pastikan nama cloud '" + cloudinaryConfig.cloudName + "' sudah benar.");
-  }
+  const cloudinaryTest = async () => {
+    try {
+      await timeoutPromise(6000, fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/ping`, { method: 'GET', mode: 'no-cors' }), "Timeout (6 detik) - Gagal menghubungi server Cloudinary.");
+      badgeCloudinary.className = 'badge badge-status-accepted';
+      badgeCloudinary.innerText = 'TERHUBUNG (OK)';
+    } catch(e) {
+      badgeCloudinary.className = 'badge badge-status-rejected';
+      badgeCloudinary.innerText = 'KONEKSI GAGAL';
+      errors.push("Eror Cloudinary: " + e.message + "\n--> Solusi: Periksa koneksi internet Anda atau pastikan nama cloud '" + cloudinaryConfig.cloudName + "' sudah benar.");
+    }
+  };
+
+  // Run tests in parallel
+  await Promise.all([firestoreTest(), cloudinaryTest()]);
 
   // Show error box if any error occurs
   if (errors.length > 0) {
