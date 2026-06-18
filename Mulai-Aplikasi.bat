@@ -18,7 +18,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [INFO] Menjalankan server kearsipan lokal...
-start "Server Kearsipan HEXA" cmd /c "npx -y http-server public -p 5000 -c-1"
+start "Server Kearsipan HEXA" cmd /c "npx -y http-server . -p 5000 -c-1"
 
 echo [INFO] Menunggu server siap...
 timeout /t 2 /nobreak >nul
