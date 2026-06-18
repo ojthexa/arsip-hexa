@@ -575,11 +575,12 @@ async function fetchGeneratedNumbers() {
     tbody.innerHTML = '';
 
     if (snap.empty) {
-      tbody.innerHTML = `<tr><td colspan="4" class="text-center">Belum ada nomor yang digenerate.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center">Belum ada nomor yang digenerate.</td></tr>`;
       return;
     }
 
     snap.forEach(doc => {
+      const id = doc.id;
       const item = doc.data();
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -587,10 +588,28 @@ async function fetchGeneratedNumbers() {
         <td><span class="badge badge-status-sent">${getCategoryLabel(item.type)}</span></td>
         <td>${item.unitName}</td>
         <td>${new Date(item.createdAt).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})}</td>
+        <td class="actions-column">
+          <button class="btn-icon-only delete" onclick="deleteGeneratedNumber('${id}')" title="Hapus Nomor">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
+
+    lucide.createIcons();
   } catch (e) {}
+}
+
+async function deleteGeneratedNumber(id) {
+  if (!confirm('Hapus riwayat penomoran ini? Tindakan ini tidak dapat dibatalkan.')) return;
+  try {
+    await db.collection('generated_numbers').doc(id).delete();
+    fetchGeneratedNumbers();
+  } catch(e) {
+    console.error("Gagal menghapus riwayat penomoran:", e);
+    alert("Gagal menghapus riwayat penomoran: " + e.message);
+  }
 }
 
 async function handleGenerateNumber(e) {
@@ -615,12 +634,31 @@ async function handleGenerateNumber(e) {
     const romanMonths = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
     const currentMonthRoman = romanMonths[currentMonthNum - 1];
 
-    // Hitung nomor urut berikutnya berdasarkan jenis dokumen dan tahun berjalan
-    const countSnap = await db.collection('generated_numbers')
+    let clientObj = null;
+    if (formatPattern.includes('[KLIEN]')) {
+      const clientName = document.getElementById('gen-client').value;
+      if (!clientName) {
+        alert('Klien harus dipilih untuk format penomoran ini.');
+        return;
+      }
+
+      clientObj = await ensureClientExists(clientName);
+      if (!clientObj) {
+        alert('Gagal memproses data klien.');
+        return;
+      }
+    }
+
+    // Hitung nomor urut berikutnya berdasarkan jenis dokumen, tahun berjalan, dan klien (jika ada)
+    let query = db.collection('generated_numbers')
       .where('type', '==', type)
-      .where('year', '==', currentYear)
-      .get();
-      
+      .where('year', '==', currentYear);
+
+    if (clientObj) {
+      query = query.where('clientCode', '==', clientObj.code);
+    }
+
+    const countSnap = await query.get();
     const nextNum = countSnap.size + 1;
     const paddedNum = String(nextNum).padStart(3, '0');
 
@@ -632,6 +670,10 @@ async function handleGenerateNumber(e) {
       .replace('[BULAN-ROMAWI]', currentMonthRoman)
       .replace('[TAHUN]', String(currentYear));
 
+    if (clientObj) {
+      generated = generated.replace('[KLIEN]', clientObj.code);
+    }
+
     const newNumRecord = {
       number: generated,
       type,
@@ -641,21 +683,7 @@ async function handleGenerateNumber(e) {
       createdAt: new Date().toISOString()
     };
 
-    if (formatPattern.includes('[KLIEN]')) {
-      const clientName = document.getElementById('gen-client').value;
-      if (!clientName) {
-        alert('Klien harus dipilih untuk format penomoran ini.');
-        return;
-      }
-
-      const clientObj = await ensureClientExists(clientName);
-      if (!clientObj) {
-        alert('Gagal memproses data klien.');
-        return;
-      }
-
-      generated = generated.replace('[KLIEN]', clientObj.code);
-      newNumRecord.number = generated;
+    if (clientObj) {
       newNumRecord.clientCode = clientObj.code;
       newNumRecord.clientName = clientObj.name;
     }
@@ -783,14 +811,13 @@ async function openDocModal(type, editId = null) {
     document.getElementById('lbl-sender').innerText = 'Asal Surat (Pengirim) *';
     document.getElementById('lbl-received-date').innerText = 'Tanggal Diterima';
     document.getElementById('doc-sender').placeholder = 'Contoh: Dinas Pendidikan Kota';
-    document.getElementById('btn-use-gen-number').style.display = 'none';
   } else {
     document.getElementById('modal-doc-title').innerText = editId ? 'Edit Surat Keluar' : 'Tambah Surat Keluar';
     document.getElementById('lbl-sender').innerText = 'Tujuan Surat (Penerima) *';
     document.getElementById('lbl-received-date').innerText = 'Tanggal Dikirim';
     document.getElementById('doc-sender').placeholder = 'Contoh: PT. Hexa Jaya Sentosa';
-    document.getElementById('btn-use-gen-number').style.display = 'inline-block';
   }
+  document.getElementById('btn-use-gen-number').style.display = 'inline-block';
 
   // Jika Edit mode, ambil data dari Firebase
   if (editId) {
