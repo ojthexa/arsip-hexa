@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kearsipan Digital - HEXA</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons (untuk ikon minimalis) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <!-- SVG Logo HEXA Resmi -->
+        <svg viewBox="0 0 160 50" width="160" height="50" xmlns="http://www.w3.org/2000/svg">
+          <!-- Icon Hexagon Geometris Merah -->
+          <g transform="translate(5, 5)">
+            <!-- Outer Hexagon -->
+            <path d="M 20 0 L 37.32 10 L 37.32 30 L 20 40 L 2.68 30 L 2.68 10 Z" fill="none" stroke="#D32F2F" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <!-- Inner Y Spokes -->
+            <path d="M 20 20 L 20 40 M 20 20 L 2.68 10 M 20 20 L 37.32 10" fill="none" stroke="#D32F2F" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <!-- Center Ring -->
+            <circle cx="20" cy="20" r="7.5" fill="#D32F2F"/>
+            <circle cx="20" cy="20" r="3" fill="#FFFFFF"/>
+            <!-- Face Chevrons to match the 3D cube look -->
+            <path d="M 20 10 L 28.66 15 L 28.66 25" fill="none" stroke="#D32F2F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" style="opacity: 0.85;"/>
+            <path d="M 11.34 25 L 11.34 15 L 20 10" fill="none" stroke="#D32F2F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" style="opacity: 0.85;"/>
+            <path d="M 11.34 25 L 20 30 L 28.66 25" fill="none" stroke="#D32F2F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" style="opacity: 0.85;"/>
+          </g>
+          <!-- Brand Text HEXA -->
+          <text x="52" y="34" font-family="'Inter', system-ui, sans-serif" font-weight="800" font-size="23" fill="#000000" letter-spacing="1">HEXA</text>
+        </svg>
+      </div>
+
+      <div class="sidebar-section">Menu Utama</div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-page="dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-page="generator">
+          <i data-lucide="hash"></i>
+          <span>Generator Nomor</span>
+        </a>
+        <a href="#" class="nav-item" data-page="surat-masuk">
+          <i data-lucide="mail-check"></i>
+          <span>Surat Masuk</span>
+        </a>
+        <a href="#" class="nav-item" data-page="surat-keluar">
+          <i data-lucide="mail-x"></i>
+          <span>Surat Keluar</span>
+        </a>
+        <a href="#" class="nav-item" data-page="quotation">
+          <i data-lucide="file-text"></i>
+          <span>Quotation</span>
+        </a>
+        <a href="#" class="nav-item" data-page="invoicing">
+          <i data-lucide="receipt"></i>
+          <span>Invoicing</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-section">Pengaturan</div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item" data-page="unit">
+          <i data-lucide="building-2"></i>
+          <span>Unit Kerja</span>
+        </a>
+        <a href="#" class="nav-item" data-page="format-nomor">
+          <i data-lucide="sliders"></i>
+          <span>Format Nomor</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="avatar"><i data-lucide="user"></i></div>
+          <div class="user-info">
+            <span class="user-name">Administrator</span>
+            <span class="user-role">admin@gmail.com</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN BODY -->
+    <main class="main-content">
+      <!-- HEADER -->
+      <header class="main-header">
+        <div class="header-title-area">
+          <h2 id="header-title">Sistem Kearsipan Digital</h2>
+          <p id="header-subtitle">Manajemen Surat & Dokumen</p>
+        </div>
+        <div class="header-actions">
+          <div class="db-status-badge">
+            <span class="status-indicator online"></span>
+            <span>Database Lokal Aktif</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- CONTENT SECTIONS -->
+      <div class="content-body">
+        
+        <!-- ==========================================
+             DASHBOARD PAGE
+             ========================================== -->
+        <section id="page-dashboard" class="page-section active">
+          <!-- Stats Cards Grid -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Total Surat Masuk</span>
+                <span class="stat-icon red"><i data-lucide="mail-check"></i></span>
+              </div>
+              <div class="stat-value" id="stat-masuk">0</div>
+              <div class="stat-trend"><i data-lucide="trending-up"></i> Surat Masuk terarsipkan</div>
+            </div>
+            
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Total Surat Keluar</span>
+                <span class="stat-icon red"><i data-lucide="mail-x"></i></span>
+              </div>
+              <div class="stat-value" id="stat-keluar">0</div>
+              <div class="stat-trend"><i data-lucide="trending-up"></i> Surat Keluar terarsipkan</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Total Quotation</span>
+                <span class="stat-icon red"><i data-lucide="file-text"></i></span>
+              </div>
+              <div class="stat-value" id="stat-quotation">0</div>
+              <div class="stat-trend"><i data-lucide="trending-up"></i> Dokumen penawaran</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Total Invoicing</span>
+                <span class="stat-icon red"><i data-lucide="receipt"></i></span>
+              </div>
+              <div class="stat-value" id="stat-invoice">0</div>
+              <div class="stat-trend"><i data-lucide="trending-up"></i> Dokumen penagihan</div>
+            </div>
+          </div>
+
+          <!-- Activities & Unit Stats Grid -->
+          <div class="dashboard-details-grid">
+            <!-- Recent Activity -->
+            <div class="details-card">
+              <div class="card-header">
+                <h3>Aktivitas Terbaru</h3>
+                <p>Dokumen dan nomor surat yang baru saja diproses</p>
+              </div>
+              <div class="card-body">
+                <ul class="activity-list" id="recent-activities">
+                  <!-- Dynamic Item -->
+                  <li class="loading-item">Memuat aktivitas...</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Unit Stats -->
+            <div class="details-card">
+              <div class="card-header">
+                <h3>Statistik Unit</h3>
+                <p>Penggunaan sistem kearsipan per unit kerja</p>
+              </div>
+              <div class="card-body">
+                <div class="unit-stats-list" id="unit-stats">
+                  <!-- Dynamic Progress Bars -->
+                  <li class="loading-item">Memuat statistik unit...</li>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             GENERATOR NOMOR PAGE
+             ========================================== -->
+        <section id="page-generator" class="page-section">
+          <div class="split-layout">
+            <div class="form-card">
+              <div class="card-header">
+                <h3>Generate Nomor Surat / Dokumen</h3>
+                <p>Dapatkan nomor unik berdasarkan kategori dan unit kerja</p>
+              </div>
+              <form id="form-generator" class="classic-form">
+                <div class="form-group">
+                  <label for="gen-type">Kategori Dokumen <span class="required">*</span></label>
+                  <select id="gen-type" required>
+                    <option value="" disabled selected>Pilih Kategori...</option>
+                    <option value="masuk">Surat Masuk</option>
+                    <option value="keluar">Surat Keluar</option>
+                    <option value="quotation">Quotation</option>
+                    <option value="invoicing">Invoicing</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="gen-unit">Unit Kerja <span class="required">*</span></label>
+                  <select id="gen-unit" required>
+                    <option value="" disabled selected>Pilih Unit...</option>
+                    <!-- Dynamic -->
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block"><i data-lucide="play"></i> Generate Nomor</button>
+              </form>
+              
+              <!-- Result Box -->
+              <div id="generator-result-box" class="result-box hidden">
+                <p>Nomor Berhasil Dibuat:</p>
+                <div class="generated-number" id="generated-number-value">-</div>
+                <button class="btn btn-outline btn-block btn-copy" id="btn-copy-number"><i data-lucide="copy"></i> Salin Nomor</button>
+              </div>
+            </div>
+
+            <div class="table-card">
+              <div class="card-header">
+                <h3>Riwayat Nomor Digunakan</h3>
+                <p>Nomor-nomor yang telah digenerate sebelumnya</p>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nomor Dokumen</th>
+                      <th>Kategori</th>
+                      <th>Unit Kerja</th>
+                      <th>Tanggal Dibuat</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-generated-numbers-body">
+                    <tr><td colspan="4" class="text-center">Memuat riwayat...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             SURAT MASUK PAGE
+             ========================================== -->
+        <section id="page-surat-masuk" class="page-section">
+          <div class="page-action-header">
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input type="text" id="search-surat-masuk" placeholder="Cari nomor, pengirim, perihal...">
+            </div>
+            <button class="btn btn-primary" onclick="openDocModal('masuk')"><i data-lucide="plus"></i> Tambah Surat Masuk</button>
+          </div>
+
+          <div class="table-card mt-4">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nomor Surat</th>
+                    <th>Asal Pengirim</th>
+                    <th>Perihal</th>
+                    <th>Tanggal Surat</th>
+                    <th>Diterima</th>
+                    <th>Unit Penerima</th>
+                    <th class="actions-column">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-surat-masuk-body">
+                  <tr><td colspan="7" class="text-center">Memuat surat masuk...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             SURAT KELUAR PAGE
+             ========================================== -->
+        <section id="page-surat-keluar" class="page-section">
+          <div class="page-action-header">
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input type="text" id="search-surat-keluar" placeholder="Cari nomor, penerima, perihal...">
+            </div>
+            <button class="btn btn-primary" onclick="openDocModal('keluar')"><i data-lucide="plus"></i> Tambah Surat Keluar</button>
+          </div>
+
+          <div class="table-card mt-4">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nomor Surat</th>
+                    <th>Tujuan Penerima</th>
+                    <th>Perihal</th>
+                    <th>Tanggal Surat</th>
+                    <th>Dikirim</th>
+                    <th>Unit Pengirim</th>
+                    <th class="actions-column">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-surat-keluar-body">
+                  <tr><td colspan="7" class="text-center">Memuat surat keluar...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             QUOTATION PAGE
+             ========================================== -->
+        <section id="page-quotation" class="page-section">
+          <div class="page-action-header">
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input type="text" id="search-quotation" placeholder="Cari nomor, klien, perihal...">
+            </div>
+            <button class="btn btn-primary" onclick="openQuotationModal()"><i data-lucide="plus"></i> Tambah Quotation</button>
+          </div>
+
+          <div class="table-card mt-4">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nomor Quotation</th>
+                    <th>Nama Klien</th>
+                    <th>Perihal</th>
+                    <th>Tanggal</th>
+                    <th>Nominal</th>
+                    <th>Unit</th>
+                    <th>Status</th>
+                    <th class="actions-column">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-quotation-body">
+                  <tr><td colspan="8" class="text-center">Memuat quotations...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             INVOICING PAGE
+             ========================================== -->
+        <section id="page-invoicing" class="page-section">
+          <div class="page-action-header">
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input type="text" id="search-invoicing" placeholder="Cari nomor invoice, klien...">
+            </div>
+            <button class="btn btn-primary" onclick="openInvoiceModal()"><i data-lucide="plus"></i> Tambah Invoice</button>
+          </div>
+
+          <div class="table-card mt-4">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nomor Invoice</th>
+                    <th>Nama Klien</th>
+                    <th>Tanggal Invoice</th>
+                    <th>Jatuh Tempo</th>
+                    <th>Nominal</th>
+                    <th>Unit</th>
+                    <th>Status</th>
+                    <th class="actions-column">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-invoicing-body">
+                  <tr><td colspan="8" class="text-center">Memuat invoices...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             UNIT SETTINGS PAGE
+             ========================================== -->
+        <section id="page-unit" class="page-section">
+          <div class="split-layout">
+            <div class="form-card">
+              <div class="card-header">
+                <h3 id="unit-form-title">Tambah Unit Kerja</h3>
+                <p>Kelola unit kerja atau divisi dalam administrasi kearsipan</p>
+              </div>
+              <form id="form-unit" class="classic-form">
+                <input type="hidden" id="unit-id">
+                <div class="form-group">
+                  <label for="unit-name">Nama Unit Kerja <span class="required">*</span></label>
+                  <input type="text" id="unit-name" placeholder="Contoh: Bagian Keuangan" required>
+                </div>
+                <div class="form-group">
+                  <label for="unit-code">Kode Singkatan <span class="required">*</span></label>
+                  <input type="text" id="unit-code" placeholder="Contoh: KEU" style="text-transform: uppercase;" maxlength="10" required>
+                  <small class="form-help">Kode singkatan digunakan untuk generator nomor surat.</small>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn btn-outline hidden" id="btn-cancel-unit">Batal</button>
+                  <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Simpan Unit</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="table-card">
+              <div class="card-header">
+                <h3>Daftar Unit Kerja</h3>
+                <p>Seluruh unit kerja terdaftar</p>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nama Unit Kerja</th>
+                      <th>Kode Singkatan</th>
+                      <th class="actions-column">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-units-body">
+                    <tr><td colspan="3" class="text-center">Memuat unit...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             FORMAT NOMOR SETTINGS PAGE
+             ========================================== -->
+        <section id="page-format-nomor" class="page-section">
+          <div class="table-card">
+            <div class="card-header">
+              <h3>Format Penomoran Otomatis</h3>
+              <p>Atur template penomoran surat dan dokumen. Perubahan akan langsung berdampak pada nomor yang digenerate.</p>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Kategori Dokumen</th>
+                    <th>Pola / Template Format Nomor</th>
+                    <th class="actions-column">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-formats-body">
+                  <tr><td colspan="3" class="text-center">Memuat format...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="card-footer-info mt-4">
+              <h4>Variabel Template yang Tersedia:</h4>
+              <ul class="variable-list">
+                <li><code>[NOMOR]</code> - Nomor urut otomatis (contoh: 001, 002) yang direset tiap pergantian tahun.</li>
+                <li><code>[UNIT]</code> - Kode singkatan unit kerja yang dipilih (contoh: KEU, KEP).</li>
+                <li><code>[BULAN]</code> - Angka bulan berjalan dua digit (contoh: 06 untuk Juni).</li>
+                <li><code>[BULAN-ROMAWI]</code> - Angka bulan berjalan dalam angka Romawi (contoh: VI untuk Juni).</li>
+                <li><code>[TAHUN]</code> - Tahun berjalan 4 digit (contoh: 2026).</li>
+              </ul>
+              <p class="mt-2 text-muted">Contoh pola: <code>SK/[NOMOR]/[UNIT]/[BULAN-ROMAWI]/[TAHUN]</code> akan menghasilkan <code>SK/001/KEU/VI/2026</code></p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ==========================================
+       MODAL: TAMBAH/EDIT SURAT (MASUK/KELUAR)
+       ========================================== -->
+  <div class="modal" id="modal-document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-doc-title">Tambah Dokumen</h3>
+        <button class="modal-close" onclick="closeDocModal()"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-document" enctype="multipart/form-data">
+        <input type="hidden" id="doc-id">
+        <input type="hidden" id="doc-type">
+        
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="doc-number">Nomor Surat <span class="required">*</span></label>
+            <div class="input-with-button">
+              <input type="text" id="doc-number" placeholder="Contoh: SM/001/UM/VI/2026" required>
+              <button type="button" class="btn btn-outline btn-small" id="btn-use-gen-number" title="Ambil dari nomor yang telah digenerate">Ambil Nomor</button>
+            </div>
+          </div>
+          <div class="form-group col-6">
+            <label for="doc-unit">Unit Kerja Terkait <span class="required">*</span></label>
+            <select id="doc-unit" required>
+              <option value="" disabled selected>Pilih Unit...</option>
+              <!-- Dynamic -->
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="doc-date">Tanggal Surat <span class="required">*</span></label>
+            <input type="date" id="doc-date" required>
+          </div>
+          <div class="form-group col-6">
+            <label for="doc-received-date" id="lbl-received-date">Tanggal Diterima / Proses</label>
+            <input type="date" id="doc-received-date">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="doc-sender" id="lbl-sender">Pengirim (Asal Surat) / Penerima (Tujuan) <span class="required">*</span></label>
+          <input type="text" id="doc-sender" placeholder="Contoh: Dinas Pendidikan / PT. Hexa Jaya" required>
+        </div>
+
+        <div class="form-group">
+          <label for="doc-subject">Perihal <span class="required">*</span></label>
+          <input type="text" id="doc-subject" placeholder="Contoh: Undangan Rapat Koordinasi Tahunan" required>
+        </div>
+
+        <div class="form-group">
+          <label for="doc-file">Lampiran File Dokumen (PDF / Gambar)</label>
+          <input type="file" id="doc-file" accept="application/pdf,image/*">
+          <small class="form-help" id="doc-file-info">File akan disimpan secara lokal di drive D:.</small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeDocModal()">Batal</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Simpan Arsip</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: TAMBAH/EDIT QUOTATION
+       ========================================== -->
+  <div class="modal" id="modal-quotation">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-q-title">Tambah Quotation</h3>
+        <button class="modal-close" onclick="closeQuotationModal()"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-quotation" enctype="multipart/form-data">
+        <input type="hidden" id="q-id">
+        
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="q-number">Nomor Quotation <span class="required">*</span></label>
+            <div class="input-with-button">
+              <input type="text" id="q-number" placeholder="Contoh: QT/001/UM/06/2026" required>
+              <button type="button" class="btn btn-outline btn-small" id="btn-use-gen-q" title="Ambil nomor generated">Ambil Nomor</button>
+            </div>
+          </div>
+          <div class="form-group col-6">
+            <label for="q-unit">Unit Kerja <span class="required">*</span></label>
+            <select id="q-unit" required>
+              <option value="" disabled selected>Pilih Unit...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="q-date">Tanggal Quotation <span class="required">*</span></label>
+            <input type="date" id="q-date" required>
+          </div>
+          <div class="form-group col-6">
+            <label for="q-amount">Nominal Penawaran (Rupiah)</label>
+            <input type="number" id="q-amount" placeholder="Contoh: 15000000" min="0">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="q-client">Nama Klien / Perusahaan <span class="required">*</span></label>
+            <input type="text" id="q-client" placeholder="Contoh: PT. Sumber Makmur" required>
+          </div>
+          <div class="form-group col-6">
+            <label for="q-status">Status Penawaran</label>
+            <select id="q-status">
+              <option value="Draft">Draft</option>
+              <option value="Sent">Sent (Terkirim)</option>
+              <option value="Accepted">Accepted (Diterima)</option>
+              <option value="Rejected">Rejected (Ditolak)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="q-subject">Perihal <span class="required">*</span></label>
+          <input type="text" id="q-subject" placeholder="Contoh: Penawaran Pengadaan Hardware Kantor" required>
+        </div>
+
+        <div class="form-group">
+          <label for="q-file">File Dokumen Quotation (PDF / Gambar)</label>
+          <input type="file" id="q-file" accept="application/pdf,image/*">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeQuotationModal()">Batal</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Simpan Quotation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: TAMBAH/EDIT INVOICING
+       ========================================== -->
+  <div class="modal" id="modal-invoice">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-i-title">Tambah Invoice</h3>
+        <button class="modal-close" onclick="closeInvoiceModal()"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-invoice" enctype="multipart/form-data">
+        <input type="hidden" id="i-id">
+        
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="i-number">Nomor Invoice <span class="required">*</span></label>
+            <div class="input-with-button">
+              <input type="text" id="i-number" placeholder="Contoh: INV/001/UM/06/2026" required>
+              <button type="button" class="btn btn-outline btn-small" id="btn-use-gen-i" title="Ambil nomor generated">Ambil Nomor</button>
+            </div>
+          </div>
+          <div class="form-group col-6">
+            <label for="i-unit">Unit Kerja <span class="required">*</span></label>
+            <select id="i-unit" required>
+              <option value="" disabled selected>Pilih Unit...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="i-date">Tanggal Invoice <span class="required">*</span></label>
+            <input type="date" id="i-date" required>
+          </div>
+          <div class="form-group col-6">
+            <label for="i-due-date">Tanggal Jatuh Tempo</label>
+            <input type="date" id="i-due-date">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="i-client">Nama Klien <span class="required">*</span></label>
+            <input type="text" id="i-client" placeholder="Contoh: PT. Jaya Abadi" required>
+          </div>
+          <div class="form-group col-6">
+            <label for="i-amount">Nominal Tagihan (Rupiah) <span class="required">*</span></label>
+            <input type="number" id="i-amount" placeholder="Contoh: 24500000" min="0" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="i-status">Status Pembayaran</label>
+            <select id="i-status">
+              <option value="Unpaid">Unpaid (Belum Dibayar)</option>
+              <option value="Paid">Paid (Lunas)</option>
+              <option value="Overdue">Overdue (Terlambat)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="i-file">File Dokumen Invoice (PDF / Gambar)</label>
+          <input type="file" id="i-file" accept="application/pdf,image/*">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeInvoiceModal()">Batal</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Simpan Invoice</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: PREVIEW FILE
+       ========================================== -->
+  <div class="modal" id="modal-preview">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 id="modal-preview-title">Preview Dokumen</h3>
+        <div class="preview-actions-header">
+          <a href="#" class="btn btn-outline btn-small" id="btn-download-file" target="_blank"><i data-lucide="download"></i> Download</a>
+          <button class="modal-close" onclick="closePreviewModal()"><i data-lucide="x"></i></button>
+        </div>
+      </div>
+      <div class="preview-container">
+        <!-- Dynamic Frame for PDF or Image -->
+        <div id="preview-content-box" class="preview-content-box">
+          <p class="text-center text-muted">Memuat preview...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: SELEKTOR NOMOR GENERATED
+       ========================================== -->
+  <div class="modal" id="modal-selector">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Pilih Nomor dari Generator</h3>
+        <button class="modal-close" onclick="closeSelectorModal()"><i data-lucide="x"></i></button>
+      </div>
+      <div class="selector-body">
+        <p class="text-muted mb-2">Pilih nomor surat/dokumen yang sudah digenerate sebelumnya dan belum terpakai:</p>
+        <div class="selector-list" id="selector-number-list">
+          <!-- Dynamic List -->
+          <div class="text-center text-muted py-4">Memuat nomor...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGIC SCRIPT -->
+  <script src="app.js"></script>
+</body>
+</html>
