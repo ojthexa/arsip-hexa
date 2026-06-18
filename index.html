@@ -107,6 +107,10 @@
           <i data-lucide="building-2"></i>
           <span>Unit Kerja</span>
         </a>
+        <a href="#" class="nav-item" data-page="kategori-surat">
+          <i data-lucide="tag"></i>
+          <span>Kategori Surat</span>
+        </a>
         <a href="#" class="nav-item" data-page="klien">
           <i data-lucide="users"></i>
           <span>Daftar Klien</span>
@@ -253,6 +257,11 @@
                    <label for="gen-client">Klien <span class="required">*</span></label>
                    <input type="text" id="gen-client" list="gen-client-list" placeholder="Pilih atau ketik nama klien...">
                    <datalist id="gen-client-list"></datalist>
+                 </div>
+                 <div class="form-group hidden" id="gen-letter-cat-group">
+                   <label for="gen-letter-cat">Kategori Surat <span class="required">*</span></label>
+                   <input type="text" id="gen-letter-cat" list="gen-letter-cat-list" placeholder="Pilih atau ketik kategori surat...">
+                   <datalist id="gen-letter-cat-list"></datalist>
                  </div>
                  <button type="submit" class="btn btn-primary btn-block"><i data-lucide="play"></i> Generate Nomor</button>
               </form>
@@ -512,8 +521,60 @@
                 <li><code>[BULAN-ROMAWI]</code> - Angka bulan berjalan dalam angka Romawi (contoh: VI untuk Juni).</li>
                 <li><code>[TAHUN]</code> - Tahun berjalan 4 digit (contoh: 2026).</li>
                 <li><code>[KLIEN]</code> - Kode singkatan klien yang dipilih (contoh: TLK, KEU, SMR).</li>
+                <li><code>[KATEGORI]</code> - Kode singkatan kategori surat yang dipilih (contoh: SMK, MOU, PKS).</li>
               </ul>
-              <p class="mt-2 text-muted">Contoh pola: <code>SK/[NOMOR]/[UNIT]/[BULAN-ROMAWI]/[TAHUN]</code> akan menghasilkan <code>SK/001/KEU/VI/2026</code></p>
+              <p class="mt-2 text-muted">Contoh pola: <code>[NOMOR]/[UNIT]/[KATEGORI]-[KLIEN]/[BULAN-ROMAWI]/[TAHUN]</code> akan menghasilkan <code>001/PKL/SMK-MJY/VI/2026</code></p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             KATEGORI SURAT SETTINGS PAGE
+             ========================================== -->
+        <section id="page-kategori-surat" class="page-section">
+          <div class="split-layout">
+            <div class="form-card">
+              <div class="card-header">
+                <h3 id="kat-surat-form-title">Tambah Kategori Surat</h3>
+                <p>Kelola kategori/varian surat keluar (misal: SMK, MOU, PKS)</p>
+              </div>
+              <form id="form-kategori-surat" class="classic-form">
+                <input type="hidden" id="kat-surat-id">
+                <div class="form-group">
+                  <label for="kat-surat-name">Nama Kategori Surat <span class="required">*</span></label>
+                  <input type="text" id="kat-surat-name" placeholder="Contoh: Kerjasama SMK" required>
+                </div>
+                <div class="form-group">
+                  <label for="kat-surat-code">Kode Singkatan <span class="required">*</span></label>
+                  <input type="text" id="kat-surat-code" placeholder="Contoh: SMK" style="text-transform: uppercase;" maxlength="10" required>
+                  <small class="form-help">Kode singkatan digunakan untuk generator nomor surat.</small>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn btn-outline hidden" id="btn-cancel-kat-surat">Batal</button>
+                  <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Simpan Kategori</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="table-card">
+              <div class="card-header">
+                <h3>Daftar Kategori Surat</h3>
+                <p>Seluruh kategori/varian surat terdaftar</p>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nama Kategori Surat</th>
+                      <th>Kode Singkatan</th>
+                      <th class="actions-column">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-kategori-surat-body">
+                    <tr><td colspan="3" class="text-center">Memuat kategori...</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>

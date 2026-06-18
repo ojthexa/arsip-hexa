@@ -200,9 +200,9 @@ async function initializeFirebaseDb() {
     if (formatsSnap.empty) {
       const defaultFormats = [
         { id: 'masuk', name: 'Surat Masuk', format: 'SM/[NOMOR]/[UNIT]/[BULAN-ROMAWI]/[TAHUN]' },
-        { id: 'keluar', name: 'Surat Keluar', format: 'SK/[NOMOR]/[UNIT]/[BULAN-ROMAWI]/[TAHUN]' },
-        { id: 'quotation', name: 'Quotation', format: 'QT/[NOMOR]/[UNIT]/[BULAN]/[TAHUN]' },
-        { id: 'invoicing', name: 'Invoicing', format: 'INV/[NOMOR]/[UNIT]/[BULAN]/[TAHUN]' }
+        { id: 'keluar', name: 'Surat Keluar', format: '[NOMOR]/[UNIT]/[KATEGORI]-[KLIEN]/[BULAN-ROMAWI]/[TAHUN]' },
+        { id: 'quotation', name: 'Quotation', format: 'QT/[NOMOR]/[UNIT]/[KLIEN]/[BULAN]/[TAHUN]' },
+        { id: 'invoicing', name: 'Invoicing', format: 'INV/[NOMOR]/[UNIT]/[KLIEN]/[BULAN]/[TAHUN]' }
       ];
       for (const fmt of defaultFormats) {
         await db.collection('number_formats').doc(fmt.id).set({
@@ -231,6 +231,20 @@ async function initializeFirebaseDb() {
       const defaultCats = ['Swasta', 'BUMN', 'Pemerintah', 'Lainnya'];
       for (const cat of defaultCats) {
         await db.collection('client_categories').add({ name: cat });
+      }
+    }
+
+    // 5. Inisialisasi Kategori Surat jika kosong
+    const letterCatsSnap = await db.collection('letter_categories').get();
+    if (letterCatsSnap.empty) {
+      const defaultLetterCats = [
+        { name: 'Kerjasama SMK', code: 'SMK' },
+        { name: 'Memorandum of Understanding', code: 'MOU' },
+        { name: 'Perjanjian Kerja Sama', code: 'PKS' },
+        { name: 'Surat Perintah Kerja', code: 'SPK' }
+      ];
+      for (const cat of defaultLetterCats) {
+        await db.collection('letter_categories').add(cat);
       }
     }
   } catch (err) {
@@ -277,6 +291,8 @@ function switchPage(pageId) {
     loadUnitData();
   } else if (pageId === 'format-nomor') {
     loadFormatData();
+  } else if (pageId === 'kategori-surat') {
+    loadKategoriSuratData();
   } else if (pageId === 'klien') {
     loadKlienData();
   }
@@ -292,6 +308,10 @@ function setupEventListeners() {
   document.getElementById('form-klien').addEventListener('submit', handleKlienSubmit);
   document.getElementById('btn-cancel-klien').addEventListener('click', resetKlienForm);
   document.getElementById('filter-klien-category').addEventListener('change', loadKlienData);
+
+  // Form Kategori Surat
+  document.getElementById('form-kategori-surat').addEventListener('submit', handleKategoriSuratSubmit);
+  document.getElementById('btn-cancel-kat-surat').addEventListener('click', resetKategoriSuratForm);
 
   // Form Generator Nomor
   document.getElementById('form-generator').addEventListener('submit', handleGenerateNumber);
@@ -551,6 +571,8 @@ function formatTimeDifference(date) {
 async function loadGeneratorData() {
   try {
     await loadUnitsDropdown('gen-unit');
+    await loadClientsDatalists();
+    await loadLetterCategoriesDatalist();
     fetchGeneratedNumbers();
   } catch (e) {}
 }
@@ -649,13 +671,32 @@ async function handleGenerateNumber(e) {
       }
     }
 
-    // Hitung nomor urut berikutnya berdasarkan jenis dokumen, tahun berjalan, dan klien (jika ada)
+    let letterCatObj = null;
+    if (formatPattern.includes('[KATEGORI]')) {
+      const letterCatName = document.getElementById('gen-letter-cat').value;
+      if (!letterCatName) {
+        alert('Kategori Surat harus dipilih untuk format penomoran ini.');
+        return;
+      }
+
+      letterCatObj = await ensureLetterCategoryExists(letterCatName);
+      if (!letterCatObj) {
+        alert('Gagal memproses data kategori surat.');
+        return;
+      }
+    }
+
+    // Hitung nomor urut berikutnya berdasarkan jenis dokumen, tahun berjalan, klien (jika ada), dan kategori surat (jika ada)
     let query = db.collection('generated_numbers')
       .where('type', '==', type)
       .where('year', '==', currentYear);
 
     if (clientObj) {
       query = query.where('clientCode', '==', clientObj.code);
+    }
+    
+    if (letterCatObj) {
+      query = query.where('letterCatCode', '==', letterCatObj.code);
     }
 
     const countSnap = await query.get();
@@ -674,6 +715,10 @@ async function handleGenerateNumber(e) {
       generated = generated.replace('[KLIEN]', clientObj.code);
     }
 
+    if (letterCatObj) {
+      generated = generated.replace('[KATEGORI]', letterCatObj.code);
+    }
+
     const newNumRecord = {
       number: generated,
       type,
@@ -686,6 +731,11 @@ async function handleGenerateNumber(e) {
     if (clientObj) {
       newNumRecord.clientCode = clientObj.code;
       newNumRecord.clientName = clientObj.name;
+    }
+
+    if (letterCatObj) {
+      newNumRecord.letterCatCode = letterCatObj.code;
+      newNumRecord.letterCatName = letterCatObj.name;
     }
 
     await db.collection('generated_numbers').add(newNumRecord);
@@ -1525,6 +1575,144 @@ function resetKlienForm() {
   document.getElementById('btn-cancel-klien').classList.add('hidden');
 }
 
+
+// ==========================================
+// 6c. KATEGORI SURAT SETTINGS LOGIC
+// ==========================================
+let cachedLetterCategories = [];
+
+async function fetchLetterCategories() {
+  try {
+    const snap = await db.collection('letter_categories').get();
+    cachedLetterCategories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return cachedLetterCategories;
+  } catch(e) {
+    return [];
+  }
+}
+
+async function loadKategoriSuratData() {
+  const categories = await fetchLetterCategories();
+  const tbody = document.getElementById('table-kategori-surat-body');
+  tbody.innerHTML = '';
+
+  if (categories.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" class="text-center">Belum ada kategori surat terdaftar.</td></tr>`;
+    return;
+  }
+
+  categories.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="bold">${c.name}</td>
+      <td><span class="badge badge-status-sent">${c.code}</span></td>
+      <td class="actions-column">
+        <div class="action-buttons-group">
+          <button class="btn-icon-only" onclick="editKategoriSurat('${c.id}', '${c.name.replace(/'/g, "\\'")}', '${c.code}')" title="Edit Kategori">
+            <i data-lucide="edit-2"></i>
+          </button>
+          <button class="btn-icon-only delete" onclick="deleteKategoriSurat('${c.id}')" title="Hapus Kategori">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  lucide.createIcons();
+}
+
+async function handleKategoriSuratSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById('kat-surat-id').value;
+  const name = document.getElementById('kat-surat-name').value;
+  const code = document.getElementById('kat-surat-code').value.toUpperCase();
+
+  try {
+    if (id) {
+      await db.collection('letter_categories').doc(id).update({ name, code });
+    } else {
+      await db.collection('letter_categories').add({ name, code });
+    }
+    resetKategoriSuratForm();
+    loadKategoriSuratData();
+    alert("Kategori surat berhasil disimpan!");
+  } catch(err) {
+    console.error("Gagal menyimpan kategori surat:", err);
+    alert("Gagal menyimpan kategori surat: " + err.message);
+  }
+}
+
+function editKategoriSurat(id, name, code) {
+  document.getElementById('kat-surat-id').value = id;
+  document.getElementById('kat-surat-name').value = name;
+  document.getElementById('kat-surat-code').value = code;
+
+  document.getElementById('kat-surat-form-title').innerText = 'Edit Kategori Surat';
+  document.getElementById('btn-cancel-kat-surat').classList.remove('hidden');
+}
+
+async function deleteKategoriSurat(id) {
+  if (!confirm('Hapus kategori surat ini? Penomoran lama tidak akan terganggu.')) return;
+  try {
+    await db.collection('letter_categories').doc(id).delete();
+    loadKategoriSuratData();
+  } catch(e) {
+    console.error("Gagal menghapus kategori surat:", e);
+    alert("Gagal menghapus kategori surat: " + e.message);
+  }
+}
+
+function resetKategoriSuratForm() {
+  document.getElementById('kat-surat-id').value = '';
+  document.getElementById('kat-surat-name').value = '';
+  document.getElementById('kat-surat-code').value = '';
+  document.getElementById('kat-surat-form-title').innerText = 'Tambah Kategori Surat';
+  document.getElementById('btn-cancel-kat-surat').classList.add('hidden');
+}
+
+async function loadLetterCategoriesDatalist() {
+  const categories = await fetchLetterCategories();
+  const datalist = document.getElementById('gen-letter-cat-list');
+  if (datalist) {
+    datalist.innerHTML = '';
+    categories.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      opt.innerText = c.code;
+      datalist.appendChild(opt);
+    });
+  }
+}
+
+async function ensureLetterCategoryExists(catNameOrCode) {
+  if (!catNameOrCode) return null;
+  const valTrimmed = catNameOrCode.trim();
+  if (!valTrimmed) return null;
+
+  try {
+    const snap = await db.collection('letter_categories').get();
+    const allCats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    let match = allCats.find(c => c.name.toLowerCase() === valTrimmed.toLowerCase() || c.code.toLowerCase() === valTrimmed.toLowerCase());
+    if (match) {
+      return match;
+    }
+
+    const autoCode = valTrimmed.toUpperCase().substring(0, 4);
+    const newCat = {
+      name: valTrimmed,
+      code: autoCode
+    };
+    const docRef = await db.collection('letter_categories').add(newCat);
+    return { id: docRef.id, ...newCat };
+  } catch (e) {
+    console.error("Gagal menyimpan kategori surat ke DB:", e);
+    return null;
+  }
+}
+
 async function loadClientsDropdown(selectId) {
   await loadClientsDatalists();
 }
@@ -1675,6 +1863,9 @@ async function handleGenTypeChange() {
       const formatPattern = formatDoc.data().format;
       const clientGroup = document.getElementById('gen-client-group');
       const clientInput = document.getElementById('gen-client');
+      
+      const letterCatGroup = document.getElementById('gen-letter-cat-group');
+      const letterCatInput = document.getElementById('gen-letter-cat');
 
       if (formatPattern.includes('[KLIEN]')) {
         clientGroup.classList.remove('hidden');
@@ -1683,6 +1874,15 @@ async function handleGenTypeChange() {
       } else {
         clientGroup.classList.add('hidden');
         clientInput.removeAttribute('required');
+      }
+
+      if (formatPattern.includes('[KATEGORI]')) {
+        letterCatGroup.classList.remove('hidden');
+        letterCatInput.setAttribute('required', 'true');
+        await loadLetterCategoriesDatalist();
+      } else {
+        letterCatGroup.classList.add('hidden');
+        letterCatInput.removeAttribute('required');
       }
     }
   } catch (err) {
