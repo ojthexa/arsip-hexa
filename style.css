@@ -1194,3 +1194,17 @@ body {
 .login-error-msg.hidden {
   display: none;
 }
+
+/* ADAPTIVE LOGO THEME TOGGLE */
+.logo-dark {
+  display: none;
+}
+.logo-light {
+  display: block;
+}
+[data-theme="dark"] .logo-dark {
+  display: block;
+}
+[data-theme="dark"] .logo-light {
+  display: none;
+}
