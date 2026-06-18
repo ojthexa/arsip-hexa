@@ -838,26 +838,22 @@ body {
 .search-box {
   display: flex;
   align-items: center;
-  position: relative;
   max-width: 320px;
   width: 100%;
 }
 
 .search-box i {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
   width: 16px;
   height: 16px;
   color: var(--text-muted);
-  pointer-events: none;
+  margin-right: 12px;
+  flex-shrink: 0;
 }
 
 .search-box input {
   font-family: var(--font-family);
   font-size: 13.5px;
-  padding: 8px 12px 8px 48px;
+  padding: 8px 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   outline: none;
