@@ -224,6 +224,15 @@ async function initializeFirebaseDb() {
         await db.collection('clients').add(c);
       }
     }
+
+    // 4. Inisialisasi Kategori Klien jika kosong
+    const catsSnap = await db.collection('client_categories').get();
+    if (catsSnap.empty) {
+      const defaultCats = ['Swasta', 'BUMN', 'Pemerintah', 'Lainnya'];
+      for (const cat of defaultCats) {
+        await db.collection('client_categories').add({ name: cat });
+      }
+    }
   } catch (err) {
     console.error('Firebase DB initialization error:', err.message);
   }
@@ -633,14 +642,22 @@ async function handleGenerateNumber(e) {
     };
 
     if (formatPattern.includes('[KLIEN]')) {
-      const clientCode = document.getElementById('gen-client').value;
-      if (!clientCode) {
+      const clientName = document.getElementById('gen-client').value;
+      if (!clientName) {
         alert('Klien harus dipilih untuk format penomoran ini.');
         return;
       }
-      generated = generated.replace('[KLIEN]', clientCode);
+
+      const clientObj = await ensureClientExists(clientName);
+      if (!clientObj) {
+        alert('Gagal memproses data klien.');
+        return;
+      }
+
+      generated = generated.replace('[KLIEN]', clientObj.code);
       newNumRecord.number = generated;
-      newNumRecord.clientCode = clientCode;
+      newNumRecord.clientCode = clientObj.code;
+      newNumRecord.clientName = clientObj.name;
     }
 
     await db.collection('generated_numbers').add(newNumRecord);
@@ -1022,6 +1039,7 @@ async function handleQuotationSubmit(e) {
   const file = fileInput.files[0];
 
   try {
+    await ensureClientExists(client);
     let filePath = '';
     let fileName = '';
 
@@ -1214,6 +1232,7 @@ async function handleInvoiceSubmit(e) {
   const file = fileInput.files[0];
 
   try {
+    await ensureClientExists(client);
     let filePath = '';
     let fileName = '';
 
@@ -1381,6 +1400,7 @@ async function fetchClients() {
 }
 
 async function loadKlienData() {
+  await loadCategoriesData();
   const filterVal = document.getElementById('filter-klien-category').value;
   const clients = await fetchClients();
   const tbody = document.getElementById('table-klien-body');
@@ -1433,6 +1453,7 @@ async function handleKlienSubmit(e) {
   const category = document.getElementById('klien-category').value;
 
   try {
+    await ensureCategoryExists(category);
     if (id) {
       await db.collection('clients').doc(id).update({ name, code, category });
     } else {
@@ -1478,38 +1499,143 @@ function resetKlienForm() {
 }
 
 async function loadClientsDropdown(selectId) {
-  const select = document.getElementById(selectId);
-  if (!select) return;
-  
-  const prevValue = select.value;
-  
-  select.innerHTML = `<option value="" disabled selected>Pilih Klien...</option>`;
+  await loadClientsDatalists();
+}
 
-  const clients = await fetchClients();
-  clients.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.name;
-    opt.innerText = `${c.name} (${c.code})`;
-    select.appendChild(opt);
-  });
-  
-  if (prevValue) {
-    select.value = prevValue;
+let cachedCategories = [];
+
+async function fetchCategories() {
+  try {
+    const snap = await db.collection('client_categories').get();
+    cachedCategories = snap.docs.map(doc => doc.data().name);
+    cachedCategories.sort();
+    return cachedCategories;
+  } catch (e) {
+    return ['Swasta', 'BUMN', 'Pemerintah', 'Lainnya'];
   }
 }
 
-async function loadClientsDropdownForGenerator(selectId) {
-  const select = document.getElementById(selectId);
-  if (!select) return;
-  select.innerHTML = `<option value="" disabled selected>Pilih Klien...</option>`;
+async function ensureCategoryExists(categoryName) {
+  if (!categoryName) return;
+  const nameTrimmed = categoryName.trim();
+  if (!nameTrimmed) return;
+  
+  try {
+    const snap = await db.collection('client_categories').where('name', '==', nameTrimmed).get();
+    if (snap.empty) {
+      await db.collection('client_categories').add({ name: nameTrimmed });
+      await fetchCategories();
+    }
+  } catch (e) {
+    console.error("Gagal menambahkan kategori baru ke DB:", e);
+  }
+}
 
+async function loadCategoriesData() {
+  const categories = await fetchCategories();
+  
+  const datalist = document.getElementById('klien-category-list');
+  if (datalist) {
+    datalist.innerHTML = '';
+    categories.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      datalist.appendChild(opt);
+    });
+  }
+
+  const filterSelect = document.getElementById('filter-klien-category');
+  if (filterSelect) {
+    const prevVal = filterSelect.value || 'all';
+    filterSelect.innerHTML = `<option value="all">Semua Kategori</option>`;
+    categories.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.innerText = cat;
+      filterSelect.appendChild(opt);
+    });
+    filterSelect.value = prevVal;
+  }
+}
+
+function generateClientCode(name) {
+  let clean = name.replace(/^(PT\.|CV\.|UD\.|PT|CV|UD)\s+/i, '');
+  clean = clean.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+  const words = clean.split(/\s+/);
+  let code = '';
+  if (words.length >= 3) {
+    code = words[0][0] + words[1][0] + words[2][0];
+  } else if (words.length === 2) {
+    code = words[0][0] + words[1][0] + (words[1][1] || 'X');
+  } else if (words[0]) {
+    code = words[0].substring(0, 3);
+  }
+  code = code.toUpperCase();
+  while (code.length < 3) {
+    code += 'X';
+  }
+  return code.substring(0, 3);
+}
+
+async function ensureClientExists(clientName) {
+  if (!clientName) return null;
+  const nameTrimmed = clientName.trim();
+  if (!nameTrimmed) return null;
+
+  try {
+    const snap = await db.collection('clients').where('name', '==', nameTrimmed).get();
+    if (snap.empty) {
+      const autoCode = generateClientCode(nameTrimmed);
+      const newClient = {
+        name: nameTrimmed,
+        code: autoCode,
+        category: 'Lainnya'
+      };
+      const docRef = await db.collection('clients').add(newClient);
+      await fetchClients();
+      return { id: docRef.id, ...newClient };
+    } else {
+      const doc = snap.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+  } catch (e) {
+    console.error("Gagal menyimpan klien ke DB:", e);
+    return null;
+  }
+}
+
+async function loadClientsDatalists() {
   const clients = await fetchClients();
-  clients.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.code;
-    opt.innerText = `${c.name} (${c.code})`;
-    select.appendChild(opt);
-  });
+  
+  const qList = document.getElementById('q-client-list');
+  if (qList) {
+    qList.innerHTML = '';
+    clients.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      qList.appendChild(opt);
+    });
+  }
+
+  const iList = document.getElementById('i-client-list');
+  if (iList) {
+    iList.innerHTML = '';
+    clients.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      iList.appendChild(opt);
+    });
+  }
+
+  const genList = document.getElementById('gen-client-list');
+  if (genList) {
+    genList.innerHTML = '';
+    clients.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      genList.appendChild(opt);
+    });
+  }
 }
 
 async function handleGenTypeChange() {
@@ -1521,15 +1647,15 @@ async function handleGenTypeChange() {
     if (formatDoc.exists) {
       const formatPattern = formatDoc.data().format;
       const clientGroup = document.getElementById('gen-client-group');
-      const clientSelect = document.getElementById('gen-client');
+      const clientInput = document.getElementById('gen-client');
 
       if (formatPattern.includes('[KLIEN]')) {
         clientGroup.classList.remove('hidden');
-        clientSelect.setAttribute('required', 'true');
-        await loadClientsDropdownForGenerator('gen-client');
+        clientInput.setAttribute('required', 'true');
+        await loadClientsDatalists();
       } else {
         clientGroup.classList.add('hidden');
-        clientSelect.removeAttribute('required');
+        clientInput.removeAttribute('required');
       }
     }
   } catch (err) {
