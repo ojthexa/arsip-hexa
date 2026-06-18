@@ -211,6 +211,19 @@ async function initializeFirebaseDb() {
         });
       }
     }
+
+    // 3. Inisialisasi Daftar Klien jika kosong
+    const clientsSnap = await db.collection('clients').get();
+    if (clientsSnap.empty) {
+      const defaultClients = [
+        { name: 'PT. Telkom Indonesia', code: 'TLK', category: 'BUMN' },
+        { name: 'Kementerian Keuangan', code: 'KEU', category: 'Pemerintah' },
+        { name: 'PT. Solusi Prima', code: 'SLP', category: 'Swasta' }
+      ];
+      for (const c of defaultClients) {
+        await db.collection('clients').add(c);
+      }
+    }
   } catch (err) {
     console.error('Firebase DB initialization error:', err.message);
   }
@@ -255,6 +268,8 @@ function switchPage(pageId) {
     loadUnitData();
   } else if (pageId === 'format-nomor') {
     loadFormatData();
+  } else if (pageId === 'klien') {
+    loadKlienData();
   }
 }
 
@@ -264,8 +279,14 @@ function setupEventListeners() {
   document.getElementById('form-unit').addEventListener('submit', handleUnitSubmit);
   document.getElementById('btn-cancel-unit').addEventListener('click', resetUnitForm);
 
+  // Form Klien
+  document.getElementById('form-klien').addEventListener('submit', handleKlienSubmit);
+  document.getElementById('btn-cancel-klien').addEventListener('click', resetKlienForm);
+  document.getElementById('filter-klien-category').addEventListener('change', loadKlienData);
+
   // Form Generator Nomor
   document.getElementById('form-generator').addEventListener('submit', handleGenerateNumber);
+  document.getElementById('gen-type').addEventListener('change', handleGenTypeChange);
   
   // Copy Number Button
   document.getElementById('btn-copy-number').addEventListener('click', () => {
@@ -611,6 +632,17 @@ async function handleGenerateNumber(e) {
       createdAt: new Date().toISOString()
     };
 
+    if (formatPattern.includes('[KLIEN]')) {
+      const clientCode = document.getElementById('gen-client').value;
+      if (!clientCode) {
+        alert('Klien harus dipilih untuk format penomoran ini.');
+        return;
+      }
+      generated = generated.replace('[KLIEN]', clientCode);
+      newNumRecord.number = generated;
+      newNumRecord.clientCode = clientCode;
+    }
+
     await db.collection('generated_numbers').add(newNumRecord);
     
     // Tampilkan Hasil
@@ -930,6 +962,7 @@ async function openQuotationModal(editId = null) {
 
   document.getElementById('q-id').value = editId || '';
   await loadUnitsDropdown('q-unit');
+  await loadClientsDropdown('q-client');
 
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('q-date').value = today;
@@ -1120,6 +1153,7 @@ async function openInvoiceModal(editId = null) {
 
   document.getElementById('i-id').value = editId || '';
   await loadUnitsDropdown('i-unit');
+  await loadClientsDropdown('i-client');
 
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('i-date').value = today;
@@ -1328,6 +1362,179 @@ function resetUnitForm() {
   document.getElementById('unit-code').value = '';
   document.getElementById('unit-form-title').innerText = 'Tambah Unit Kerja';
   document.getElementById('btn-cancel-unit').classList.add('hidden');
+}
+
+
+// ==========================================
+// 6b. CLIENTS SETTINGS LOGIC
+// ==========================================
+let cachedClients = [];
+
+async function fetchClients() {
+  try {
+    const snap = await db.collection('clients').get();
+    cachedClients = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return cachedClients;
+  } catch(e) {
+    return [];
+  }
+}
+
+async function loadKlienData() {
+  const filterVal = document.getElementById('filter-klien-category').value;
+  const clients = await fetchClients();
+  const tbody = document.getElementById('table-klien-body');
+  tbody.innerHTML = '';
+
+  const filteredClients = filterVal === 'all'
+    ? clients
+    : clients.filter(c => c.category === filterVal);
+
+  if (filteredClients.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center">Belum ada klien terdaftar untuk kategori ini.</td></tr>`;
+    return;
+  }
+
+  filteredClients.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="bold">${c.name}</td>
+      <td><span class="badge badge-status-draft">${c.code}</span></td>
+      <td><span class="badge ${getClientCategoryBadgeClass(c.category)}">${c.category}</span></td>
+      <td class="actions-column">
+        <div class="action-buttons-group">
+          <button class="btn-icon-only" onclick="editKlien('${c.id}', '${c.name.replace(/'/g, "\\'")}', '${c.code}', '${c.category}')" title="Edit Klien">
+            <i data-lucide="edit-2"></i>
+          </button>
+          <button class="btn-icon-only delete" onclick="deleteKlien('${c.id}')" title="Hapus Klien">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  lucide.createIcons();
+}
+
+function getClientCategoryBadgeClass(category) {
+  if (category === 'Swasta') return 'badge-status-sent';
+  if (category === 'BUMN') return 'badge-status-unpaid';
+  if (category === 'Pemerintah') return 'badge-status-accepted';
+  return 'badge-status-draft';
+}
+
+async function handleKlienSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById('klien-id').value;
+  const name = document.getElementById('klien-name').value;
+  const code = document.getElementById('klien-code').value.toUpperCase();
+  const category = document.getElementById('klien-category').value;
+
+  try {
+    if (id) {
+      await db.collection('clients').doc(id).update({ name, code, category });
+    } else {
+      await db.collection('clients').add({ name, code, category });
+    }
+    resetKlienForm();
+    loadKlienData();
+    alert("Data klien berhasil disimpan!");
+  } catch(err) {
+    console.error("Gagal menyimpan klien:", err);
+    alert("Gagal menyimpan klien: " + err.message);
+  }
+}
+
+function editKlien(id, name, code, category) {
+  document.getElementById('klien-id').value = id;
+  document.getElementById('klien-name').value = name;
+  document.getElementById('klien-code').value = code;
+  document.getElementById('klien-category').value = category;
+
+  document.getElementById('klien-form-title').innerText = 'Edit Data Klien';
+  document.getElementById('btn-cancel-klien').classList.remove('hidden');
+}
+
+async function deleteKlien(id) {
+  if (!confirm('Hapus klien ini? Nomor surat/dokumen lama tidak akan terganggu.')) return;
+  try {
+    await db.collection('clients').doc(id).delete();
+    loadKlienData();
+  } catch(e) {
+    console.error("Gagal menghapus klien:", e);
+    alert("Gagal menghapus klien: " + e.message);
+  }
+}
+
+function resetKlienForm() {
+  document.getElementById('klien-id').value = '';
+  document.getElementById('klien-name').value = '';
+  document.getElementById('klien-code').value = '';
+  document.getElementById('klien-category').value = '';
+  document.getElementById('klien-form-title').innerText = 'Tambah Klien';
+  document.getElementById('btn-cancel-klien').classList.add('hidden');
+}
+
+async function loadClientsDropdown(selectId) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  
+  const prevValue = select.value;
+  
+  select.innerHTML = `<option value="" disabled selected>Pilih Klien...</option>`;
+
+  const clients = await fetchClients();
+  clients.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.name;
+    opt.innerText = `${c.name} (${c.code})`;
+    select.appendChild(opt);
+  });
+  
+  if (prevValue) {
+    select.value = prevValue;
+  }
+}
+
+async function loadClientsDropdownForGenerator(selectId) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  select.innerHTML = `<option value="" disabled selected>Pilih Klien...</option>`;
+
+  const clients = await fetchClients();
+  clients.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.code;
+    opt.innerText = `${c.name} (${c.code})`;
+    select.appendChild(opt);
+  });
+}
+
+async function handleGenTypeChange() {
+  const type = document.getElementById('gen-type').value;
+  if (!type) return;
+
+  try {
+    const formatDoc = await db.collection('number_formats').doc(type).get();
+    if (formatDoc.exists) {
+      const formatPattern = formatDoc.data().format;
+      const clientGroup = document.getElementById('gen-client-group');
+      const clientSelect = document.getElementById('gen-client');
+
+      if (formatPattern.includes('[KLIEN]')) {
+        clientGroup.classList.remove('hidden');
+        clientSelect.setAttribute('required', 'true');
+        await loadClientsDropdownForGenerator('gen-client');
+      } else {
+        clientGroup.classList.add('hidden');
+        clientSelect.removeAttribute('required');
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 

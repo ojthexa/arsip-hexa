@@ -107,6 +107,10 @@
           <i data-lucide="sliders"></i>
           <span>Format Nomor</span>
         </a>
+        <a href="#" class="nav-item" data-page="klien">
+          <i data-lucide="users"></i>
+          <span>Daftar Klien</span>
+        </a>
       </nav>
       
       <div class="sidebar-footer">
@@ -239,13 +243,20 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="gen-unit">Unit Kerja <span class="required">*</span></label>
-                  <select id="gen-unit" required>
-                    <option value="" disabled selected>Pilih Unit...</option>
-                    <!-- Dynamic -->
-                  </select>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block"><i data-lucide="play"></i> Generate Nomor</button>
+                   <label for="gen-unit">Unit Kerja <span class="required">*</span></label>
+                   <select id="gen-unit" required>
+                     <option value="" disabled selected>Pilih Unit...</option>
+                     <!-- Dynamic -->
+                   </select>
+                 </div>
+                 <div class="form-group hidden" id="gen-client-group">
+                   <label for="gen-client">Klien <span class="required">*</span></label>
+                   <select id="gen-client">
+                     <option value="" disabled selected>Pilih Klien...</option>
+                     <!-- Dynamic -->
+                   </select>
+                 </div>
+                 <button type="submit" class="btn btn-primary btn-block"><i data-lucide="play"></i> Generate Nomor</button>
               </form>
               
               <!-- Result Box -->
@@ -501,8 +512,84 @@
                 <li><code>[BULAN]</code> - Angka bulan berjalan dua digit (contoh: 06 untuk Juni).</li>
                 <li><code>[BULAN-ROMAWI]</code> - Angka bulan berjalan dalam angka Romawi (contoh: VI untuk Juni).</li>
                 <li><code>[TAHUN]</code> - Tahun berjalan 4 digit (contoh: 2026).</li>
+                <li><code>[KLIEN]</code> - Kode singkatan klien yang dipilih (contoh: TLK, KEU, SMR).</li>
               </ul>
               <p class="mt-2 text-muted">Contoh pola: <code>SK/[NOMOR]/[UNIT]/[BULAN-ROMAWI]/[TAHUN]</code> akan menghasilkan <code>SK/001/KEU/VI/2026</code></p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             KLIEN SETTINGS PAGE
+             ========================================== -->
+        <section id="page-klien" class="page-section">
+          <div class="split-layout">
+            <div class="form-card">
+              <div class="card-header">
+                <h3 id="klien-form-title">Tambah Klien</h3>
+                <p>Kelola data klien/perusahaan untuk dokumen penawaran & penagihan</p>
+              </div>
+              <form id="form-klien" class="classic-form">
+                <input type="hidden" id="klien-id">
+                <div class="form-group">
+                  <label for="klien-name">Nama Klien / Perusahaan <span class="required">*</span></label>
+                  <input type="text" id="klien-name" placeholder="Contoh: PT. Sumber Makmur" required>
+                </div>
+                <div class="form-group">
+                  <label for="klien-code">Kode Singkatan <span class="required">*</span></label>
+                  <input type="text" id="klien-code" placeholder="Contoh: SMR" style="text-transform: uppercase;" maxlength="10" required>
+                  <small class="form-help">Kode singkatan digunakan untuk generator nomor surat/dokumen.</small>
+                </div>
+                <div class="form-group">
+                  <label for="klien-category">Kategori Klien <span class="required">*</span></label>
+                  <select id="klien-category" required>
+                    <option value="" disabled selected>Pilih Kategori...</option>
+                    <option value="Swasta">Swasta</option>
+                    <option value="BUMN">BUMN</option>
+                    <option value="Pemerintah">Pemerintah</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn btn-outline hidden" id="btn-cancel-klien">Batal</button>
+                  <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Simpan Klien</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="table-card">
+              <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                  <h3>Daftar Klien</h3>
+                  <p>Seluruh klien terdaftar untuk penomoran</p>
+                </div>
+                <!-- Filter Kategori Klien -->
+                <div class="filter-klien-area" style="display: flex; align-items: center; gap: 8px;">
+                  <label for="filter-klien-category" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">Filter:</label>
+                  <select id="filter-klien-category" style="padding: 6px 12px; font-size: 12.5px; border-radius: var(--border-radius); border: 1px solid var(--border-color); background-color: var(--bg-primary); color: var(--text-primary); outline: none;">
+                    <option value="all">Semua Kategori</option>
+                    <option value="Swasta">Swasta</option>
+                    <option value="BUMN">BUMN</option>
+                    <option value="Pemerintah">Pemerintah</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nama Klien</th>
+                      <th>Kode Singkatan</th>
+                      <th>Kategori</th>
+                      <th class="actions-column">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-klien-body">
+                    <tr><td colspan="4" class="text-center">Memuat klien...</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>
@@ -618,7 +705,9 @@
         <div class="form-row">
           <div class="form-group col-6">
             <label for="q-client">Nama Klien / Perusahaan <span class="required">*</span></label>
-            <input type="text" id="q-client" placeholder="Contoh: PT. Sumber Makmur" required>
+            <select id="q-client" required>
+              <option value="" disabled selected>Pilih Klien...</option>
+            </select>
           </div>
           <div class="form-group col-6">
             <label for="q-status">Status Penawaran</label>
@@ -692,7 +781,9 @@
         <div class="form-row">
           <div class="form-group col-6">
             <label for="i-client">Nama Klien <span class="required">*</span></label>
-            <input type="text" id="i-client" placeholder="Contoh: PT. Jaya Abadi" required>
+            <select id="i-client" required>
+              <option value="" disabled selected>Pilih Klien...</option>
+            </select>
           </div>
           <div class="form-group col-6">
             <label for="i-amount">Nominal Tagihan (Rupiah) <span class="required">*</span></label>
