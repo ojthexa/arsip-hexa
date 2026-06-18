@@ -73,8 +73,60 @@ let cachedUnits = [];
 let cachedFormats = [];
 let currentSelectorTargetInput = null;
 
+// AUTHENTICATION LOGIC
+function checkAuth() {
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const loginContainer = document.getElementById('login-container');
+  const appContainer = document.getElementById('app-container');
+
+  if (isLoggedIn) {
+    if (loginContainer) loginContainer.classList.add('hidden');
+    if (appContainer) appContainer.style.display = 'flex';
+  } else {
+    if (loginContainer) loginContainer.classList.remove('hidden');
+    if (appContainer) appContainer.style.display = 'none';
+  }
+}
+
+function handleLoginSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errorMsg = document.getElementById('login-error');
+
+  if (email === 'admin@gmail.com' && password === 'admin123') {
+    localStorage.setItem('isLoggedIn', 'true');
+    if (errorMsg) errorMsg.classList.add('hidden');
+    checkAuth();
+  } else {
+    if (errorMsg) errorMsg.classList.remove('hidden');
+  }
+}
+
+function handleLogout() {
+  if (confirm('Apakah Anda yakin ingin keluar dari sistem?')) {
+    localStorage.removeItem('isLoggedIn');
+    checkAuth();
+  }
+}
+
 // DOM ELEMENTS & INITIALIZATION
 document.addEventListener('DOMContentLoaded', () => {
+  // Check auth first
+  checkAuth();
+
+  // Attach login listener
+  const loginForm = document.getElementById('form-login');
+  if (loginForm) {
+    loginForm.addEventListener('submit', handleLoginSubmit);
+  }
+
+  // Attach logout listener
+  const logoutProfile = document.getElementById('user-profile-logout');
+  if (logoutProfile) {
+    logoutProfile.addEventListener('click', handleLogout);
+  }
+
   // Initialize Lucide Icons
   try {
     lucide.createIcons();

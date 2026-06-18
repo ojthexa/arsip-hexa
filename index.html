@@ -18,26 +18,75 @@
   </script>
 </head>
 <body>
-  <div class="app-container">
+  <!-- ==========================================
+       LOGIN PAGE
+       ========================================== -->
+  <div id="login-container" class="login-container">
+    <div class="login-card">
+      <div class="login-logo">
+        <svg viewBox="0 0 160 50" width="180" height="60" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(5, 5)">
+            <path d="M 20 1.5 L 36.02 10.75 L 36.02 29.25 L 20 38.5 L 3.98 29.25 L 3.98 10.75 Z" fill="var(--logo-color)" stroke="var(--logo-color)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+            <path d="M 20 5 L 33 12.5 L 33 27.5 L 20 35 L 7 27.5 L 7 12.5 Z" fill="none" stroke="var(--bg-primary)" stroke-width="2.5" stroke-linejoin="round"/>
+            <path d="M 20 20 L 20 35 M 20 20 L 7 12.5 M 20 20 L 33 12.5" fill="none" stroke="var(--bg-primary)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <circle cx="20" cy="20" r="7.5" fill="var(--bg-primary)"/>
+            <circle cx="20" cy="20" r="4.8" fill="var(--logo-color)"/>
+            <circle cx="20" cy="20" r="2.4" fill="var(--bg-primary)"/>
+          </g>
+          <text x="52" y="34" font-family="'Inter', system-ui, sans-serif" font-weight="800" font-size="23" fill="var(--text-primary)" letter-spacing="1">HEXA</text>
+        </svg>
+      </div>
+      <h3 class="login-title">Sistem Kearsipan Digital</h3>
+      <p class="login-subtitle">Silakan masuk menggunakan akun Anda</p>
+      
+      <form id="form-login" class="login-form">
+        <div class="form-group">
+          <label for="login-email">Email / Username</label>
+          <div class="input-with-icon">
+            <i data-lucide="mail"></i>
+            <input type="email" id="login-email" placeholder="Contoh: admin@gmail.com" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <div class="input-with-icon">
+            <i data-lucide="lock"></i>
+            <input type="password" id="login-password" placeholder="Masukkan password Anda" required>
+          </div>
+        </div>
+        
+        <div id="login-error" class="login-error-msg hidden">
+          <i data-lucide="alert-circle"></i>
+          <span>Email atau password salah!</span>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block mt-4">
+          <i data-lucide="log-in"></i> Masuk Sistem
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app-container" id="app-container" style="display: none;">
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="sidebar-brand">
         <!-- SVG Logo HEXA Resmi -->
         <svg viewBox="0 0 160 50" width="160" height="50" xmlns="http://www.w3.org/2000/svg">
-          <!-- Icon Hexagon Geometris Merah (Rounded & Isometric) -->
+          <!-- Icon Hexagon Geometris (Adaptive Mode) -->
           <g transform="translate(5, 5)">
-            <!-- Outer Red Rounded Hexagon -->
-            <path d="M 20 1.5 L 36.02 10.75 L 36.02 29.25 L 20 38.5 L 3.98 29.25 L 3.98 10.75 Z" fill="#D30000" stroke="#D30000" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
-            <!-- Inner White Outline Hexagon -->
-            <path d="M 20 5 L 33 12.5 L 33 27.5 L 20 35 L 7 27.5 L 7 12.5 Z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round"/>
-            <!-- White Y Spokes -->
-            <path d="M 20 20 L 20 35 M 20 20 L 7 12.5 M 20 20 L 33 12.5" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-            <!-- Center Hub (White Outer Ring) -->
-            <circle cx="20" cy="20" r="7.5" fill="#FFFFFF"/>
-            <!-- Center Hub (Red Middle Ring) -->
-            <circle cx="20" cy="20" r="4.8" fill="#D30000"/>
-            <!-- Center Hub (White Core Dot) -->
-            <circle cx="20" cy="20" r="2.4" fill="#FFFFFF"/>
+            <!-- Outer Hexagon Frame -->
+            <path d="M 20 1.5 L 36.02 10.75 L 36.02 29.25 L 20 38.5 L 3.98 29.25 L 3.98 10.75 Z" fill="var(--logo-color)" stroke="var(--logo-color)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+            <!-- Inner Outline Hexagon -->
+            <path d="M 20 5 L 33 12.5 L 33 27.5 L 20 35 L 7 27.5 L 7 12.5 Z" fill="none" stroke="var(--bg-primary)" stroke-width="2.5" stroke-linejoin="round"/>
+            <!-- Y Spokes -->
+            <path d="M 20 20 L 20 35 M 20 20 L 7 12.5 M 20 20 L 33 12.5" fill="none" stroke="var(--bg-primary)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <!-- Center Hub (Outer Ring) -->
+            <circle cx="20" cy="20" r="7.5" fill="var(--bg-primary)"/>
+            <!-- Center Hub (Middle Ring) -->
+            <circle cx="20" cy="20" r="4.8" fill="var(--logo-color)"/>
+            <!-- Center Hub (Core Dot) -->
+            <circle cx="20" cy="20" r="2.4" fill="var(--bg-primary)"/>
           </g>
           <!-- Brand Text HEXA -->
           <text x="52" y="34" font-family="'Inter', system-ui, sans-serif" font-weight="800" font-size="23" fill="currentColor" letter-spacing="1">HEXA</text>
@@ -85,10 +134,10 @@
       </nav>
       
       <div class="sidebar-footer">
-        <div class="user-profile">
-          <div class="avatar"><i data-lucide="user"></i></div>
+        <div class="user-profile" id="user-profile-logout" style="cursor: pointer;" title="Klik untuk logout">
+          <div class="avatar"><i data-lucide="log-out"></i></div>
           <div class="user-info">
-            <span class="user-name">Administrator</span>
+            <span class="user-name">Log Out</span>
             <span class="user-role">admin@gmail.com</span>
           </div>
         </div>
