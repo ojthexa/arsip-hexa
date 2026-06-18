@@ -108,7 +108,8 @@ body {
   transition: all 0.2s ease;
 }
 
-.nav-item i {
+.nav-item i,
+.nav-item svg {
   width: 18px;
   height: 18px;
   stroke-width: 2px;
@@ -125,7 +126,8 @@ body {
   font-weight: 600;
 }
 
-.nav-item.active i {
+.nav-item.active i,
+.nav-item.active svg {
   color: var(--primary-color);
 }
 
@@ -152,7 +154,8 @@ body {
   border: 1px solid var(--border-color);
 }
 
-.avatar i {
+.avatar i,
+.avatar svg {
   width: 18px;
   height: 18px;
   color: var(--text-secondary);
@@ -235,7 +238,8 @@ body {
   background-color: var(--primary-light);
 }
 
-.btn-icon-toggle-theme i {
+.btn-icon-toggle-theme i,
+.btn-icon-toggle-theme svg {
   width: 16px;
   height: 16px;
 }
@@ -330,7 +334,8 @@ body {
   border-color: var(--primary-color);
 }
 
-.stat-icon i {
+.stat-icon i,
+.stat-icon svg {
   width: 18px;
   height: 18px;
 }
@@ -350,7 +355,8 @@ body {
   gap: 4px;
 }
 
-.stat-trend i {
+.stat-trend i,
+.stat-trend svg {
   width: 12px;
   height: 12px;
 }
@@ -585,7 +591,8 @@ body {
   cursor: not-allowed;
 }
 
-.btn i {
+.btn i,
+.btn svg {
   width: 15px;
   height: 15px;
 }
@@ -793,7 +800,8 @@ body {
   background-color: #ffebee;
 }
 
-.btn-icon-only i {
+.btn-icon-only i,
+.btn-icon-only svg {
   width: 14px;
   height: 14px;
 }
@@ -842,7 +850,8 @@ body {
   width: 100%;
 }
 
-.search-box i {
+.search-box i,
+.search-box svg {
   width: 16px;
   height: 16px;
   color: var(--text-muted);
@@ -973,7 +982,8 @@ body {
   color: var(--primary-color);
 }
 
-.modal-close i {
+.modal-close i,
+.modal-close svg {
   width: 18px;
   height: 18px;
 }
@@ -1145,7 +1155,8 @@ body {
   width: 100%;
 }
 
-.input-with-icon i {
+.input-with-icon i,
+.input-with-icon svg {
   position: absolute;
   left: 12px;
   top: 50%;
