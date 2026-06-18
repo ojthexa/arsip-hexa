@@ -1155,7 +1155,11 @@ async function handleUnitSubmit(e) {
     }
     resetUnitForm();
     loadUnitData();
-  } catch(err) {}
+    alert("Unit kerja berhasil disimpan!");
+  } catch(err) {
+    console.error("Gagal menyimpan unit:", err);
+    alert("Gagal menyimpan unit: " + err.message + "\n\nPastikan database Firestore Anda diaktifkan dan Rules-nya memperbolehkan read/write (Test Mode).");
+  }
 }
 
 function editUnit(id, name, code) {
@@ -1172,7 +1176,10 @@ async function deleteUnit(id) {
   try {
     await db.collection('units').doc(id).delete();
     loadUnitData();
-  } catch(e) {}
+  } catch(e) {
+    console.error("Gagal menghapus unit:", e);
+    alert("Gagal menghapus unit: " + e.message);
+  }
 }
 
 function resetUnitForm() {
