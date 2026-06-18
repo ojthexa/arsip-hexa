@@ -1197,14 +1197,14 @@ body {
 
 /* ADAPTIVE LOGO THEME TOGGLE */
 .logo-dark {
-  display: none;
+  display: block; /* Tampilkan logo teks hitam di mode terang */
 }
 .logo-light {
-  display: block;
+  display: none;  /* Sembunyikan logo teks putih di mode terang */
 }
 [data-theme="dark"] .logo-dark {
-  display: block;
+  display: none;  /* Sembunyikan logo teks hitam di mode gelap */
 }
 [data-theme="dark"] .logo-light {
-  display: none;
+  display: block; /* Tampilkan logo teks putih di mode gelap */
 }
