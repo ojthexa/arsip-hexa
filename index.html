@@ -605,6 +605,7 @@
         <div class="form-group">
           <label for="q-file">File Dokumen Quotation (PDF / Gambar)</label>
           <input type="file" id="q-file" accept="application/pdf,image/*">
+          <small class="form-help" id="q-file-info"></small>
         </div>
 
         <div class="modal-footer">
@@ -679,6 +680,7 @@
         <div class="form-group">
           <label for="i-file">File Dokumen Invoice (PDF / Gambar)</label>
           <input type="file" id="i-file" accept="application/pdf,image/*">
+          <small class="form-help" id="i-file-info"></small>
         </div>
 
         <div class="modal-footer">
@@ -697,6 +699,7 @@
       <div class="modal-header">
         <h3 id="modal-preview-title">Preview Dokumen</h3>
         <div class="preview-actions-header">
+          <a href="#" class="btn btn-outline btn-small" id="btn-open-new-tab" target="_blank"><i data-lucide="external-link"></i> Buka di Tab Baru</a>
           <a href="#" class="btn btn-outline btn-small" id="btn-download-file" target="_blank"><i data-lucide="download"></i> Download</a>
           <button class="modal-close" onclick="closePreviewModal()"><i data-lucide="x"></i></button>
         </div>

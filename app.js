@@ -659,11 +659,13 @@ async function openDocModal(type, editId = null) {
     document.getElementById('lbl-sender').innerText = 'Asal Surat (Pengirim) *';
     document.getElementById('lbl-received-date').innerText = 'Tanggal Diterima';
     document.getElementById('doc-sender').placeholder = 'Contoh: Dinas Pendidikan Kota';
+    document.getElementById('btn-use-gen-number').style.display = 'none';
   } else {
     document.getElementById('modal-doc-title').innerText = editId ? 'Edit Surat Keluar' : 'Tambah Surat Keluar';
     document.getElementById('lbl-sender').innerText = 'Tujuan Surat (Penerima) *';
     document.getElementById('lbl-received-date').innerText = 'Tanggal Dikirim';
     document.getElementById('doc-sender').placeholder = 'Contoh: PT. Hexa Jaya Sentosa';
+    document.getElementById('btn-use-gen-number').style.display = 'inline-block';
   }
 
   // Jika Edit mode, ambil data dari Firebase
@@ -679,12 +681,18 @@ async function openDocModal(type, editId = null) {
         document.getElementById('doc-sender').value = current.senderOrReceiver;
         document.getElementById('doc-subject').value = current.subject;
         if (current.fileName) {
-          document.getElementById('doc-file-info').innerHTML = `File saat ini: <strong>${current.fileName}</strong> (Unggah lagi untuk mengganti).`;
+          let previewBtnHtml = '';
+          if (current.filePath) {
+            previewBtnHtml = `<button type="button" class="btn btn-outline btn-small px-2 py-1 ms-2" style="display:inline-flex; align-items:center; gap:4px;" onclick="previewFile('${current.filePath}', '${current.number}')"><i data-lucide="eye" style="width:14px; height:14px;"></i> Preview</button>`;
+          }
+          document.getElementById('doc-file-info').innerHTML = `File saat ini: <strong>${current.fileName}</strong>${previewBtnHtml} <br><small class="text-muted">(Unggah lagi untuk mengganti)</small>`;
+        } else {
+          document.getElementById('doc-file-info').innerText = '';
         }
       }
     } catch(e) {}
   } else {
-    document.getElementById('doc-file-info').innerText = 'File akan disimpan di Firebase Cloud Storage.';
+    document.getElementById('doc-file-info').innerText = 'File akan disimpan di Cloud Storage (Cloudinary).';
   }
 
   modal.classList.add('active');
@@ -865,8 +873,19 @@ async function openQuotationModal(editId = null) {
         document.getElementById('q-client').value = current.client;
         document.getElementById('q-status').value = current.status;
         document.getElementById('q-subject').value = current.subject;
+        if (current.fileName) {
+          let previewBtnHtml = '';
+          if (current.filePath) {
+            previewBtnHtml = `<button type="button" class="btn btn-outline btn-small px-2 py-1 ms-2" style="display:inline-flex; align-items:center; gap:4px;" onclick="previewFile('${current.filePath}', '${current.number}')"><i data-lucide="eye" style="width:14px; height:14px;"></i> Preview</button>`;
+          }
+          document.getElementById('q-file-info').innerHTML = `File saat ini: <strong>${current.fileName}</strong>${previewBtnHtml} <br><small class="text-muted">(Unggah lagi untuk mengganti)</small>`;
+        } else {
+          document.getElementById('q-file-info').innerText = '';
+        }
       }
     } catch(e) {}
+  } else {
+    document.getElementById('q-file-info').innerText = 'File akan disimpan di Cloud Storage (Cloudinary).';
   }
 
   modal.classList.add('active');
@@ -1045,8 +1064,19 @@ async function openInvoiceModal(editId = null) {
         document.getElementById('i-amount').value = current.amount;
         document.getElementById('i-client').value = current.client;
         document.getElementById('i-status').value = current.status;
+        if (current.fileName) {
+          let previewBtnHtml = '';
+          if (current.filePath) {
+            previewBtnHtml = `<button type="button" class="btn btn-outline btn-small px-2 py-1 ms-2" style="display:inline-flex; align-items:center; gap:4px;" onclick="previewFile('${current.filePath}', '${current.number}')"><i data-lucide="eye" style="width:14px; height:14px;"></i> Preview</button>`;
+          }
+          document.getElementById('i-file-info').innerHTML = `File saat ini: <strong>${current.fileName}</strong>${previewBtnHtml} <br><small class="text-muted">(Unggah lagi untuk mengganti)</small>`;
+        } else {
+          document.getElementById('i-file-info').innerText = '';
+        }
       }
     } catch(e) {}
+  } else {
+    document.getElementById('i-file-info').innerText = 'File akan disimpan di Cloud Storage (Cloudinary).';
   }
 
   modal.classList.add('active');
@@ -1275,14 +1305,17 @@ function previewFile(filePath, documentName) {
   const modal = document.getElementById('modal-preview');
   document.getElementById('modal-preview-title').innerText = `Preview: ${documentName}`;
   
-  // Set Download Link
+  // Set Download & Open in New Tab Links
   const downloadBtn = document.getElementById('btn-download-file');
-  downloadBtn.href = filePath;
+  if (downloadBtn) downloadBtn.href = filePath;
+
+  const openNewTabBtn = document.getElementById('btn-open-new-tab');
+  if (openNewTabBtn) openNewTabBtn.href = filePath;
 
   const contentBox = document.getElementById('preview-content-box');
   contentBox.innerHTML = '';
 
-  // Extract file extension from Firebase URL (which contains query params)
+  // Extract file extension from Cloudinary or Firebase URL
   const cleanPath = filePath.split('?')[0];
   const ext = cleanPath.split('.').pop().toLowerCase();
   
@@ -1291,7 +1324,7 @@ function previewFile(filePath, documentName) {
   } else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) {
     contentBox.innerHTML = `<img src="${filePath}" alt="${documentName}">`;
   } else {
-    // If it's a firebase URL but without explicit extension, check if it contains PDF or image tokens
+    // Check if URL contains markers of PDF or image
     if (filePath.includes('.pdf') || filePath.toLowerCase().includes('pdf')) {
       contentBox.innerHTML = `<iframe src="${filePath}"></iframe>`;
     } else if (filePath.match(/\.(jpg|jpeg|png|gif|svg|webp)/i)) {
@@ -1301,7 +1334,7 @@ function previewFile(filePath, documentName) {
         <div class="text-center p-4">
           <i data-lucide="file-warning" style="width:48px; height:48px; color:var(--primary-color);"></i>
           <p class="mt-2">Format file <strong>.${ext}</strong> tidak dapat di-preview secara langsung.</p>
-          <p class="text-muted">Silakan klik tombol download di atas untuk mengunduh dokumen.</p>
+          <p class="text-muted">Silakan gunakan tombol unduh atau buka di tab baru untuk melihat file.</p>
         </div>
       `;
       lucide.createIcons();
