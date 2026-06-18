@@ -699,8 +699,8 @@ async function handleDocumentSubmit(e) {
     closeDocModal();
     loadSuratData(type);
   } catch(e) {
-    console.error(e);
-    alert('Gagal menyimpan surat ke cloud.');
+    console.error("Gagal menyimpan surat:", e);
+    alert('Gagal menyimpan surat ke cloud: ' + e.message);
   }
 }
 
@@ -887,7 +887,8 @@ async function handleQuotationSubmit(e) {
     closeQuotationModal();
     loadQuotationData();
   } catch(e) {
-    alert('Gagal menyimpan quotation.');
+    console.error("Gagal menyimpan quotation:", e);
+    alert('Gagal menyimpan quotation ke cloud: ' + e.message);
   }
 }
 
@@ -1072,7 +1073,8 @@ async function handleInvoiceSubmit(e) {
     closeInvoiceModal();
     loadInvoiceData();
   } catch(e) {
-    alert('Gagal menyimpan invoice.');
+    console.error("Gagal menyimpan invoice:", e);
+    alert('Gagal menyimpan invoice ke cloud: ' + e.message);
   }
 }
 
