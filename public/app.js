@@ -1,16 +1,32 @@
-// API BASE PATH
-const API_BASE = '';
+// FIREBASE CONFIGURATION
+const firebaseConfig = {
+  apiKey: "AIzaSyBHABjgAm-6m47H6FSDJ4QtZ_sdES6b0l0",
+  authDomain: "arsip-hexa.firebaseapp.com",
+  projectId: "arsip-hexa",
+  storageBucket: "arsip-hexa.firebasestorage.app",
+  messagingSenderId: "582953401500",
+  appId: "1:582953401500:web:ea71b3f0bbddf766b5c159",
+  measurementId: "G-7EJNVJ0S6D"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const storage = firebase.storage();
 
 // STATE GLOBAL
 let activePage = 'dashboard';
 let cachedUnits = [];
 let cachedFormats = [];
-let currentSelectorTargetInput = null; // Menyimpan input element target dari pemilih nomor
+let currentSelectorTargetInput = null;
 
 // DOM ELEMENTS & INITIALIZATION
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Initialize Lucide Icons
   lucide.createIcons();
+
+  // Initialize Default Data on Firebase if empty
+  await initializeFirebaseDb();
 
   // Navigation Links
   const navItems = document.querySelectorAll('.nav-item');
@@ -22,12 +38,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Setup Event Listeners untuk form & search
+  // Setup Event Listeners
   setupEventListeners();
 
   // Load Awal
   switchPage('dashboard');
 });
+
+// INITIALIZE DEFAULT FIREBASE DATA
+async function initializeFirebaseDb() {
+  try {
+    // 1. Inisialisasi Unit jika kosong
+    const unitsSnap = await db.collection('units').get();
+    if (unitsSnap.empty) {
+      const defaultUnits = [
+        { name: 'Bagian Umum', code: 'UM' },
+        { name: 'Kepegawaian', code: 'KEP' },
+        { name: 'Keuangan', code: 'KEU' },
+        { name: 'Perencanaan', code: 'REN' }
+      ];
+      for (const u of defaultUnits) {
+        await db.collection('units').add(u);
+      }
+    }
+
+    // 2. Inisialisasi Format Penomoran jika kosong
+    const formatsSnap = await db.collection('number_formats').get();
+    if (formatsSnap.empty) {
+      const defaultFormats = [
+        { id: 'masuk', name: 'Surat Masuk', format: 'SM/[NOMOR]/[UNIT]/[BULAN-ROMAWI]/[TAHUN]' },
+        { id: 'keluar', name: 'Surat Keluar', format: 'SK/[NOMOR]/[UNIT]/[BULAN-ROMAWI]/[TAHUN]' },
+        { id: 'quotation', name: 'Quotation', format: 'QT/[NOMOR]/[UNIT]/[BULAN]/[TAHUN]' },
+        { id: 'invoicing', name: 'Invoicing', format: 'INV/[NOMOR]/[UNIT]/[BULAN]/[TAHUN]' }
+      ];
+      for (const fmt of defaultFormats) {
+        await db.collection('number_formats').doc(fmt.id).set({
+          name: fmt.name,
+          format: fmt.format
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Firebase DB initialization error:', err.message);
+  }
+}
 
 // ROUTING / NAVIGATION CONTROLLER
 function switchPage(pageId) {
@@ -135,28 +189,87 @@ function setupSearchInput(id, callback) {
 // ==========================================
 async function loadDashboardData() {
   try {
-    const res = await fetch(`${API_BASE}/api/stats`);
-    const data = await res.json();
+    // Ambil semua data secara asinkron dari Firebase
+    const suratSnap = await db.collection('surat').get();
+    const quotationsSnap = await db.collection('quotations').get();
+    const invoicesSnap = await db.collection('invoices').get();
+    const generatedSnap = await db.collection('generated_numbers').get();
+    const unitsSnap = await db.collection('units').get();
 
-    // Populate counts
-    document.getElementById('stat-masuk').innerText = data.totalMasuk.toLocaleString('id-ID');
-    document.getElementById('stat-keluar').innerText = data.totalKeluar.toLocaleString('id-ID');
-    document.getElementById('stat-quotation').innerText = data.totalQuotation.toLocaleString('id-ID');
-    document.getElementById('stat-invoice').innerText = data.totalInvoice.toLocaleString('id-ID');
+    // Hitung Total Dokumen
+    const totalMasuk = suratSnap.docs.filter(doc => doc.data().type === 'masuk').length;
+    const totalKeluar = suratSnap.docs.filter(doc => doc.data().type === 'keluar').length;
+    const totalQuotation = quotationsSnap.size;
+    const totalInvoice = invoicesSnap.size;
 
-    // Populate Recent Activity
+    // Tampilkan Total
+    document.getElementById('stat-masuk').innerText = totalMasuk.toLocaleString('id-ID');
+    document.getElementById('stat-keluar').innerText = totalKeluar.toLocaleString('id-ID');
+    document.getElementById('stat-quotation').innerText = totalQuotation.toLocaleString('id-ID');
+    document.getElementById('stat-invoice').innerText = totalInvoice.toLocaleString('id-ID');
+
+    // Susun Aktivitas Terbaru
+    const activities = [];
+
+    suratSnap.forEach(doc => {
+      const d = doc.data();
+      activities.push({
+        title: d.subject || 'Surat Tanpa Perihal',
+        category: d.type === 'masuk' ? 'Surat Masuk' : 'Surat Keluar',
+        meta: d.senderOrReceiver,
+        time: d.createdAt,
+        type: 'surat'
+      });
+    });
+
+    quotationsSnap.forEach(doc => {
+      const d = doc.data();
+      activities.push({
+        title: d.subject || 'Penawaran',
+        category: 'Quotation',
+        meta: d.client,
+        time: d.createdAt,
+        type: 'quotation'
+      });
+    });
+
+    invoicesSnap.forEach(doc => {
+      const d = doc.data();
+      activities.push({
+        title: `Invoice #${d.number}`,
+        category: 'Invoicing',
+        meta: d.client,
+        time: d.createdAt,
+        type: 'invoice'
+      });
+    });
+
+    generatedSnap.forEach(doc => {
+      const d = doc.data();
+      activities.push({
+        title: d.number,
+        category: 'Generator Nomor',
+        meta: d.unitName,
+        time: d.createdAt,
+        type: 'number'
+      });
+    });
+
+    // Urutkan aktivitas terbaru (descending)
+    activities.sort((a, b) => new Date(b.time) - new Date(a.time));
+    const recentActivities = activities.slice(0, 7);
+
+    // Populate Aktivitas Terbaru ke UI
     const actList = document.getElementById('recent-activities');
     actList.innerHTML = '';
     
-    if (data.recentActivities.length === 0) {
+    if (recentActivities.length === 0) {
       actList.innerHTML = `<li class="text-center text-muted py-4">Belum ada aktivitas dokumen saat ini.</li>`;
     } else {
-      data.recentActivities.forEach(act => {
+      recentActivities.forEach(act => {
         const item = document.createElement('li');
         item.className = 'activity-item';
-
-        const rawDate = new Date(act.time);
-        const timeFormatted = formatTimeDifference(rawDate);
+        const timeFormatted = formatTimeDifference(new Date(act.time));
 
         let badgeClass = act.category.toLowerCase().replace(' ', '-');
         if (act.type === 'number') badgeClass = 'nomor';
@@ -176,16 +289,41 @@ async function loadDashboardData() {
       });
     }
 
-    // Populate Unit Stats
+    // Hitung statistik per unit kerja
+    const unitStats = {};
+    unitsSnap.forEach(doc => {
+      unitStats[doc.data().name] = 0;
+    });
+
+    // Masukkan hitungan dokumen
+    suratSnap.forEach(doc => {
+      const name = doc.data().unitName;
+      if (name && unitStats[name] !== undefined) unitStats[name]++;
+    });
+    quotationsSnap.forEach(doc => {
+      const name = doc.data().unitName;
+      if (name && unitStats[name] !== undefined) unitStats[name]++;
+    });
+    invoicesSnap.forEach(doc => {
+      const name = doc.data().unitName;
+      if (name && unitStats[name] !== undefined) unitStats[name]++;
+    });
+
+    const unitStatsArray = Object.keys(unitStats).map(key => ({
+      name: key,
+      count: unitStats[key]
+    })).sort((a, b) => b.count - a.count);
+
+    // Populate Grafik Unit ke UI
     const unitList = document.getElementById('unit-stats');
     unitList.innerHTML = '';
 
-    if (data.unitStats.length === 0) {
-      unitList.innerHTML = `<li class="text-center text-muted py-4">Belum ada dokumen terdaftar pada unit.</li>`;
+    if (unitStatsArray.length === 0) {
+      unitList.innerHTML = `<li class="text-center text-muted py-4">Belum ada unit kerja terdaftar.</li>`;
     } else {
-      const maxCount = Math.max(...data.unitStats.map(u => u.count), 1);
+      const maxCount = Math.max(...unitStatsArray.map(u => u.count), 1);
       
-      data.unitStats.forEach(u => {
+      unitStatsArray.forEach(u => {
         const percentage = Math.round((u.count / maxCount) * 100);
         const item = document.createElement('div');
         item.className = 'unit-stat-item';
@@ -226,9 +364,7 @@ function formatTimeDifference(date) {
 // ==========================================
 async function loadGeneratorData() {
   try {
-    // Load dropdown units
     await loadUnitsDropdown('gen-unit');
-    // Load Table Riwayat
     fetchGeneratedNumbers();
   } catch (e) {}
 }
@@ -248,18 +384,17 @@ async function loadUnitsDropdown(selectId) {
 
 async function fetchGeneratedNumbers() {
   try {
-    const res = await fetch(`${API_BASE}/api/generated-numbers`);
-    const data = await res.json();
-
+    const snap = await db.collection('generated_numbers').orderBy('createdAt', 'desc').limit(20).get();
     const tbody = document.getElementById('table-generated-numbers-body');
     tbody.innerHTML = '';
 
-    if (data.length === 0) {
+    if (snap.empty) {
       tbody.innerHTML = `<tr><td colspan="4" class="text-center">Belum ada nomor yang digenerate.</td></tr>`;
       return;
     }
 
-    data.forEach(item => {
+    snap.forEach(doc => {
+      const item = doc.data();
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="bold font-mono">${item.number}</td>
@@ -278,21 +413,52 @@ async function handleGenerateNumber(e) {
   const unitId = document.getElementById('gen-unit').value;
 
   try {
-    const res = await fetch(`${API_BASE}/api/generate-number`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, unitId })
-    });
-    
-    if (!res.ok) {
-      alert('Gagal me-generate nomor.');
+    const formatDoc = await db.collection('number_formats').doc(type).get();
+    const unitDoc = await db.collection('units').doc(unitId).get();
+
+    if (!formatDoc.exists || !unitDoc.exists) {
+      alert('Format penomoran atau Unit Kerja tidak ditemukan.');
       return;
     }
 
-    const data = await res.json();
+    const formatPattern = formatDoc.data().format;
+    const unitObj = unitDoc.data();
+
+    const currentYear = new Date().getFullYear();
+    const currentMonthNum = new Date().getMonth() + 1;
+    const romanMonths = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+    const currentMonthRoman = romanMonths[currentMonthNum - 1];
+
+    // Hitung nomor urut berikutnya berdasarkan jenis dokumen dan tahun berjalan
+    const countSnap = await db.collection('generated_numbers')
+      .where('type', '==', type)
+      .where('year', '==', currentYear)
+      .get();
+      
+    const nextNum = countSnap.size + 1;
+    const paddedNum = String(nextNum).padStart(3, '0');
+
+    // Ganti token dalam pola format
+    let generated = formatPattern
+      .replace('[NOMOR]', paddedNum)
+      .replace('[UNIT]', unitObj.code)
+      .replace('[BULAN]', String(currentMonthNum).padStart(2, '0'))
+      .replace('[BULAN-ROMAWI]', currentMonthRoman)
+      .replace('[TAHUN]', String(currentYear));
+
+    const newNumRecord = {
+      number: generated,
+      type,
+      unitName: unitObj.name,
+      unitCode: unitObj.code,
+      year: currentYear,
+      createdAt: new Date().toISOString()
+    };
+
+    await db.collection('generated_numbers').add(newNumRecord);
     
     // Tampilkan Hasil
-    document.getElementById('generated-number-value').innerText = data.number;
+    document.getElementById('generated-number-value').innerText = generated;
     document.getElementById('generator-result-box').classList.remove('hidden');
 
     // Refresh Riwayat
@@ -318,21 +484,38 @@ function getCategoryLabel(type) {
 // ==========================================
 async function loadSuratData(type) {
   const searchInput = document.getElementById(`search-surat-${type}`);
-  const q = searchInput ? searchInput.value : '';
+  const q = searchInput ? searchInput.value.toLowerCase() : '';
 
   try {
-    const res = await fetch(`${API_BASE}/api/surat?type=${type}&search=${encodeURIComponent(q)}`);
-    const data = await res.json();
-
+    const snap = await db.collection('surat').where('type', '==', type).get();
+    
     const tbody = document.getElementById(`table-surat-${type}-body`);
     tbody.innerHTML = '';
 
-    if (data.length === 0) {
+    let list = [];
+    snap.forEach(doc => {
+      list.push({ id: doc.id, ...doc.data() });
+    });
+
+    // Urutkan berdasarkan tanggal terbuat descending (karena offline filter manual)
+    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Lakukan pencarian client-side
+    if (q) {
+      list = list.filter(s => 
+        (s.number && s.number.toLowerCase().includes(q)) ||
+        (s.senderOrReceiver && s.senderOrReceiver.toLowerCase().includes(q)) ||
+        (s.subject && s.subject.toLowerCase().includes(q)) ||
+        (s.unitName && s.unitName.toLowerCase().includes(q))
+      );
+    }
+
+    if (list.length === 0) {
       tbody.innerHTML = `<tr><td colspan="7" class="text-center">Belum ada arsip surat.</td></tr>`;
       return;
     }
 
-    data.forEach(item => {
+    list.forEach(item => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="bold font-mono">${item.number}</td>
@@ -361,7 +544,9 @@ async function loadSuratData(type) {
     });
 
     lucide.createIcons();
-  } catch (err) {}
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 function formatDateString(str) {
@@ -400,13 +585,12 @@ async function openDocModal(type, editId = null) {
     document.getElementById('doc-sender').placeholder = 'Contoh: PT. Hexa Jaya Sentosa';
   }
 
-  // Jika Edit mode, ambil data dari API
+  // Jika Edit mode, ambil data dari Firebase
   if (editId) {
     try {
-      const res = await fetch(`${API_BASE}/api/surat?type=${type}`);
-      const list = await res.json();
-      const current = list.find(s => s.id === editId);
-      if (current) {
+      const doc = await db.collection('surat').doc(editId).get();
+      if (doc.exists) {
+        const current = doc.data();
         document.getElementById('doc-number').value = current.number;
         document.getElementById('doc-unit').value = current.unitId;
         document.getElementById('doc-date').value = current.date;
@@ -419,7 +603,7 @@ async function openDocModal(type, editId = null) {
       }
     } catch(e) {}
   } else {
-    document.getElementById('doc-file-info').innerText = 'File akan disimpan secara lokal di drive D:.';
+    document.getElementById('doc-file-info').innerText = 'File akan disimpan di Firebase Cloud Storage.';
   }
 
   modal.classList.add('active');
@@ -436,38 +620,59 @@ async function handleDocumentSubmit(e) {
   const id = document.getElementById('doc-id').value;
   const type = document.getElementById('doc-type').value;
 
-  const formData = new FormData();
-  formData.append('type', type);
-  formData.append('category', type); // Digunakan multer destination
-  formData.append('number', document.getElementById('doc-number').value);
-  formData.append('unitId', document.getElementById('doc-unit').value);
-  formData.append('date', document.getElementById('doc-date').value);
-  formData.append('receivedOrSentDate', document.getElementById('doc-received-date').value);
-  formData.append('senderOrReceiver', document.getElementById('doc-sender').value);
-  formData.append('subject', document.getElementById('doc-subject').value);
+  const docNumber = document.getElementById('doc-number').value;
+  const unitId = document.getElementById('doc-unit').value;
+  const date = document.getElementById('doc-date').value;
+  const receivedOrSentDate = document.getElementById('doc-received-date').value;
+  const senderOrReceiver = document.getElementById('doc-sender').value;
+  const subject = document.getElementById('doc-subject').value;
 
+  const unitObj = cachedUnits.find(u => u.id === unitId) || {};
   const fileInput = document.getElementById('doc-file');
-  if (fileInput.files[0]) {
-    formData.append('document', fileInput.files[0]);
-  }
-
-  const url = id ? `${API_BASE}/api/surat/${id}` : `${API_BASE}/api/surat`;
-  const method = id ? 'PUT' : 'POST';
+  const file = fileInput.files[0];
 
   try {
-    const res = await fetch(url, {
-      method: method,
-      body: formData
-    });
+    let filePath = '';
+    let fileName = '';
 
-    if (res.ok) {
-      closeDocModal();
-      loadSuratData(type);
-    } else {
-      const err = await res.json();
-      alert(`Gagal menyimpan: ${err.error}`);
+    // Upload file ke Firebase Storage jika ada file terpilih
+    if (file) {
+      const storageRef = storage.ref();
+      const fileRef = storageRef.child(`surat/${Date.now()}-${file.name}`);
+      const uploadTask = await fileRef.put(file);
+      filePath = await uploadTask.ref.getDownloadURL();
+      fileName = file.name;
     }
-  } catch(e) {}
+
+    const docData = {
+      type,
+      number: docNumber,
+      unitId,
+      unitName: unitObj.name || '',
+      date,
+      receivedOrSentDate: receivedOrSentDate || date,
+      senderOrReceiver,
+      subject
+    };
+
+    if (file) {
+      docData.filePath = filePath;
+      docData.fileName = fileName;
+    }
+
+    if (id) {
+      await db.collection('surat').doc(id).update(docData);
+    } else {
+      docData.createdAt = new Date().toISOString();
+      await db.collection('surat').add(docData);
+    }
+
+    closeDocModal();
+    loadSuratData(type);
+  } catch(e) {
+    console.error(e);
+    alert('Gagal menyimpan surat ke cloud.');
+  }
 }
 
 async function editSurat(id, type) {
@@ -475,13 +680,19 @@ async function editSurat(id, type) {
 }
 
 async function deleteSurat(id, type) {
-  if (!confirm('Apakah Anda yakin ingin menghapus data surat ini beserta filenya?')) return;
+  if (!confirm('Apakah Anda yakin ingin menghapus data surat ini?')) return;
 
   try {
-    const res = await fetch(`${API_BASE}/api/surat/${id}`, { method: 'DELETE' });
-    if (res.ok) {
-      loadSuratData(type);
+    const doc = await db.collection('surat').doc(id).get();
+    if (doc.exists && doc.data().filePath) {
+      // Hapus file dari Storage
+      try {
+        const fileRef = storage.refFromURL(doc.data().filePath);
+        await fileRef.delete();
+      } catch(err) {}
     }
+    await db.collection('surat').doc(id).delete();
+    loadSuratData(type);
   } catch(e) {}
 }
 
@@ -491,21 +702,35 @@ async function deleteSurat(id, type) {
 // ==========================================
 async function loadQuotationData() {
   const searchInput = document.getElementById('search-quotation');
-  const q = searchInput ? searchInput.value : '';
+  const q = searchInput ? searchInput.value.toLowerCase() : '';
 
   try {
-    const res = await fetch(`${API_BASE}/api/quotations?search=${encodeURIComponent(q)}`);
-    const data = await res.json();
-
+    const snap = await db.collection('quotations').get();
     const tbody = document.getElementById('table-quotation-body');
     tbody.innerHTML = '';
 
-    if (data.length === 0) {
+    let list = [];
+    snap.forEach(doc => {
+      list.push({ id: doc.id, ...doc.data() });
+    });
+
+    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    if (q) {
+      list = list.filter(item => 
+        (item.number && item.number.toLowerCase().includes(q)) ||
+        (item.client && item.client.toLowerCase().includes(q)) ||
+        (item.subject && item.subject.toLowerCase().includes(q)) ||
+        (item.unitName && item.unitName.toLowerCase().includes(q))
+      );
+    }
+
+    if (list.length === 0) {
       tbody.innerHTML = `<tr><td colspan="8" class="text-center">Belum ada quotation terarsip.</td></tr>`;
       return;
     }
 
-    data.forEach(item => {
+    list.forEach(item => {
       const tr = document.createElement('tr');
       const formattedAmount = item.amount ? `Rp ${parseFloat(item.amount).toLocaleString('id-ID')}` : 'Rp 0';
       const statusBadgeClass = `badge-status-${item.status.toLowerCase()}`;
@@ -556,10 +781,9 @@ async function openQuotationModal(editId = null) {
 
   if (editId) {
     try {
-      const res = await fetch(`${API_BASE}/api/quotations`);
-      const list = await res.json();
-      const current = list.find(item => item.id === editId);
-      if (current) {
+      const doc = await db.collection('quotations').doc(editId).get();
+      if (doc.exists) {
+        const current = doc.data();
         document.getElementById('q-number').value = current.number;
         document.getElementById('q-unit').value = current.unitId;
         document.getElementById('q-date').value = current.date;
@@ -584,37 +808,58 @@ async function handleQuotationSubmit(e) {
 
   const id = document.getElementById('q-id').value;
 
-  const formData = new FormData();
-  formData.append('category', 'quotation');
-  formData.append('number', document.getElementById('q-number').value);
-  formData.append('unitId', document.getElementById('q-unit').value);
-  formData.append('date', document.getElementById('q-date').value);
-  formData.append('amount', document.getElementById('q-amount').value);
-  formData.append('client', document.getElementById('q-client').value);
-  formData.append('status', document.getElementById('q-status').value);
-  formData.append('subject', document.getElementById('q-subject').value);
+  const number = document.getElementById('q-number').value;
+  const unitId = document.getElementById('q-unit').value;
+  const date = document.getElementById('q-date').value;
+  const amount = document.getElementById('q-amount').value;
+  const client = document.getElementById('q-client').value;
+  const status = document.getElementById('q-status').value;
+  const subject = document.getElementById('q-subject').value;
 
+  const unitObj = cachedUnits.find(u => u.id === unitId) || {};
   const fileInput = document.getElementById('q-file');
-  if (fileInput.files[0]) {
-    formData.append('document', fileInput.files[0]);
-  }
-
-  const url = id ? `${API_BASE}/api/quotations/${id}` : `${API_BASE}/api/quotations`;
-  const method = id ? 'PUT' : 'POST';
+  const file = fileInput.files[0];
 
   try {
-    const res = await fetch(url, {
-      method: method,
-      body: formData
-    });
+    let filePath = '';
+    let fileName = '';
 
-    if (res.ok) {
-      closeQuotationModal();
-      loadQuotationData();
-    } else {
-      alert('Gagal menyimpan quotation.');
+    if (file) {
+      const storageRef = storage.ref();
+      const fileRef = storageRef.child(`quotation/${Date.now()}-${file.name}`);
+      const uploadTask = await fileRef.put(file);
+      filePath = await uploadTask.ref.getDownloadURL();
+      fileName = file.name;
     }
-  } catch(e) {}
+
+    const qData = {
+      number,
+      unitId,
+      unitName: unitObj.name || '',
+      date,
+      amount: parseFloat(amount) || 0,
+      client,
+      status,
+      subject
+    };
+
+    if (file) {
+      qData.filePath = filePath;
+      qData.fileName = fileName;
+    }
+
+    if (id) {
+      await db.collection('quotations').doc(id).update(qData);
+    } else {
+      qData.createdAt = new Date().toISOString();
+      await db.collection('quotations').add(qData);
+    }
+
+    closeQuotationModal();
+    loadQuotationData();
+  } catch(e) {
+    alert('Gagal menyimpan quotation.');
+  }
 }
 
 function editQuotation(id) {
@@ -624,8 +869,15 @@ function editQuotation(id) {
 async function deleteQuotation(id) {
   if (!confirm('Apakah Anda yakin ingin menghapus quotation ini?')) return;
   try {
-    const res = await fetch(`${API_BASE}/api/quotations/${id}`, { method: 'DELETE' });
-    if (res.ok) loadQuotationData();
+    const doc = await db.collection('quotations').doc(id).get();
+    if (doc.exists && doc.data().filePath) {
+      try {
+        const fileRef = storage.refFromURL(doc.data().filePath);
+        await fileRef.delete();
+      } catch(err) {}
+    }
+    await db.collection('quotations').doc(id).delete();
+    loadQuotationData();
   } catch(e) {}
 }
 
@@ -635,21 +887,34 @@ async function deleteQuotation(id) {
 // ==========================================
 async function loadInvoiceData() {
   const searchInput = document.getElementById('search-invoicing');
-  const q = searchInput ? searchInput.value : '';
+  const q = searchInput ? searchInput.value.toLowerCase() : '';
 
   try {
-    const res = await fetch(`${API_BASE}/api/invoices?search=${encodeURIComponent(q)}`);
-    const data = await res.json();
-
+    const snap = await db.collection('invoices').get();
     const tbody = document.getElementById('table-invoicing-body');
     tbody.innerHTML = '';
 
-    if (data.length === 0) {
+    let list = [];
+    snap.forEach(doc => {
+      list.push({ id: doc.id, ...doc.data() });
+    });
+
+    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    if (q) {
+      list = list.filter(item => 
+        (item.number && item.number.toLowerCase().includes(q)) ||
+        (item.client && item.client.toLowerCase().includes(q)) ||
+        (item.unitName && item.unitName.toLowerCase().includes(q))
+      );
+    }
+
+    if (list.length === 0) {
       tbody.innerHTML = `<tr><td colspan="8" class="text-center">Belum ada invoice terarsip.</td></tr>`;
       return;
     }
 
-    data.forEach(item => {
+    list.forEach(item => {
       const tr = document.createElement('tr');
       const formattedAmount = item.amount ? `Rp ${parseFloat(item.amount).toLocaleString('id-ID')}` : 'Rp 0';
       const statusBadgeClass = `badge-status-${item.status.toLowerCase()}`;
@@ -701,10 +966,9 @@ async function openInvoiceModal(editId = null) {
 
   if (editId) {
     try {
-      const res = await fetch(`${API_BASE}/api/invoices`);
-      const list = await res.json();
-      const current = list.find(item => item.id === editId);
-      if (current) {
+      const doc = await db.collection('invoices').doc(editId).get();
+      if (doc.exists) {
+        const current = doc.data();
         document.getElementById('i-number').value = current.number;
         document.getElementById('i-unit').value = current.unitId;
         document.getElementById('i-date').value = current.date;
@@ -729,37 +993,58 @@ async function handleInvoiceSubmit(e) {
 
   const id = document.getElementById('i-id').value;
 
-  const formData = new FormData();
-  formData.append('category', 'invoicing');
-  formData.append('number', document.getElementById('i-number').value);
-  formData.append('unitId', document.getElementById('i-unit').value);
-  formData.append('date', document.getElementById('i-date').value);
-  formData.append('dueDate', document.getElementById('i-due-date').value);
-  formData.append('amount', document.getElementById('i-amount').value);
-  formData.append('client', document.getElementById('i-client').value);
-  formData.append('status', document.getElementById('i-status').value);
+  const number = document.getElementById('i-number').value;
+  const unitId = document.getElementById('i-unit').value;
+  const date = document.getElementById('i-date').value;
+  const dueDate = document.getElementById('i-due-date').value;
+  const amount = document.getElementById('i-amount').value;
+  const client = document.getElementById('i-client').value;
+  const status = document.getElementById('i-status').value;
 
+  const unitObj = cachedUnits.find(u => u.id === unitId) || {};
   const fileInput = document.getElementById('i-file');
-  if (fileInput.files[0]) {
-    formData.append('document', fileInput.files[0]);
-  }
-
-  const url = id ? `${API_BASE}/api/invoices/${id}` : `${API_BASE}/api/invoices`;
-  const method = id ? 'PUT' : 'POST';
+  const file = fileInput.files[0];
 
   try {
-    const res = await fetch(url, {
-      method: method,
-      body: formData
-    });
+    let filePath = '';
+    let fileName = '';
 
-    if (res.ok) {
-      closeInvoiceModal();
-      loadInvoiceData();
-    } else {
-      alert('Gagal menyimpan invoice.');
+    if (file) {
+      const storageRef = storage.ref();
+      const fileRef = storageRef.child(`invoicing/${Date.now()}-${file.name}`);
+      const uploadTask = await fileRef.put(file);
+      filePath = await uploadTask.ref.getDownloadURL();
+      fileName = file.name;
     }
-  } catch(e) {}
+
+    const iData = {
+      number,
+      unitId,
+      unitName: unitObj.name || '',
+      date,
+      dueDate: dueDate || '',
+      amount: parseFloat(amount) || 0,
+      client,
+      status
+    };
+
+    if (file) {
+      iData.filePath = filePath;
+      iData.fileName = fileName;
+    }
+
+    if (id) {
+      await db.collection('invoices').doc(id).update(iData);
+    } else {
+      iData.createdAt = new Date().toISOString();
+      await db.collection('invoices').add(iData);
+    }
+
+    closeInvoiceModal();
+    loadInvoiceData();
+  } catch(e) {
+    alert('Gagal menyimpan invoice.');
+  }
 }
 
 function editInvoice(id) {
@@ -769,8 +1054,15 @@ function editInvoice(id) {
 async function deleteInvoice(id) {
   if (!confirm('Apakah Anda yakin ingin menghapus invoice ini?')) return;
   try {
-    const res = await fetch(`${API_BASE}/api/invoices/${id}`, { method: 'DELETE' });
-    if (res.ok) loadInvoiceData();
+    const doc = await db.collection('invoices').doc(id).get();
+    if (doc.exists && doc.data().filePath) {
+      try {
+        const fileRef = storage.refFromURL(doc.data().filePath);
+        await fileRef.delete();
+      } catch(err) {}
+    }
+    await db.collection('invoices').doc(id).delete();
+    loadInvoiceData();
   } catch(e) {}
 }
 
@@ -780,8 +1072,8 @@ async function deleteInvoice(id) {
 // ==========================================
 async function fetchUnits() {
   try {
-    const res = await fetch(`${API_BASE}/api/units`);
-    cachedUnits = await res.json();
+    const snap = await db.collection('units').get();
+    cachedUnits = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     return cachedUnits;
   } catch(e) {
     return [];
@@ -824,22 +1116,16 @@ async function handleUnitSubmit(e) {
   e.preventDefault();
   const id = document.getElementById('unit-id').value;
   const name = document.getElementById('unit-name').value;
-  const code = document.getElementById('unit-code').value;
-
-  const url = id ? `${API_BASE}/api/units/${id}` : `${API_BASE}/api/units`;
-  const method = id ? 'PUT' : 'POST';
+  const code = document.getElementById('unit-code').value.toUpperCase();
 
   try {
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, code })
-    });
-
-    if (res.ok) {
-      resetUnitForm();
-      loadUnitData();
+    if (id) {
+      await db.collection('units').doc(id).update({ name, code });
+    } else {
+      await db.collection('units').add({ name, code });
     }
+    resetUnitForm();
+    loadUnitData();
   } catch(err) {}
 }
 
@@ -855,7 +1141,7 @@ function editUnit(id, name, code) {
 async function deleteUnit(id) {
   if (!confirm('Hapus unit ini? Unit yang terikat dengan nomor surat lama tidak akan terganggu.')) return;
   try {
-    await fetch(`${API_BASE}/api/units/${id}`, { method: 'DELETE' });
+    await db.collection('units').doc(id).delete();
     loadUnitData();
   } catch(e) {}
 }
@@ -874,8 +1160,8 @@ function resetUnitForm() {
 // ==========================================
 async function loadFormatData() {
   try {
-    const res = await fetch(`${API_BASE}/api/number-formats`);
-    cachedFormats = await res.json();
+    const snap = await db.collection('number_formats').get();
+    cachedFormats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     const tbody = document.getElementById('table-formats-body');
     tbody.innerHTML = '';
@@ -904,15 +1190,9 @@ async function loadFormatData() {
 async function saveFormat(id) {
   const newFormat = document.getElementById(`format-input-${id}`).value;
   try {
-    const res = await fetch(`${API_BASE}/api/number-formats/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ format: newFormat })
-    });
-    if (res.ok) {
-      alert('Format penomoran berhasil disimpan!');
-      loadFormatData();
-    }
+    await db.collection('number_formats').doc(id).update({ format: newFormat });
+    alert('Format penomoran berhasil disimpan!');
+    loadFormatData();
   } catch(e) {}
 }
 
@@ -931,23 +1211,30 @@ function previewFile(filePath, documentName) {
   const contentBox = document.getElementById('preview-content-box');
   contentBox.innerHTML = '';
 
-  const ext = filePath.split('.').pop().toLowerCase();
+  // Extract file extension from Firebase URL (which contains query params)
+  const cleanPath = filePath.split('?')[0];
+  const ext = cleanPath.split('.').pop().toLowerCase();
   
   if (ext === 'pdf') {
-    // Tampilkan PDF memakai iframe
     contentBox.innerHTML = `<iframe src="${filePath}"></iframe>`;
   } else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) {
-    // Tampilkan gambar memakai img tag
     contentBox.innerHTML = `<img src="${filePath}" alt="${documentName}">`;
   } else {
-    contentBox.innerHTML = `
-      <div class="text-center p-4">
-        <i data-lucide="file-warning" style="width:48px; height:48px; color:var(--primary-color);"></i>
-        <p class="mt-2">Format file <strong>.${ext}</strong> tidak dapat di-preview secara langsung.</p>
-        <p class="text-muted">Silakan klik tombol download di atas untuk mengunduh dokumen.</p>
-      </div>
-    `;
-    lucide.createIcons();
+    // If it's a firebase URL but without explicit extension, check if it contains PDF or image tokens
+    if (filePath.includes('.pdf') || filePath.toLowerCase().includes('pdf')) {
+      contentBox.innerHTML = `<iframe src="${filePath}"></iframe>`;
+    } else if (filePath.match(/\.(jpg|jpeg|png|gif|svg|webp)/i)) {
+      contentBox.innerHTML = `<img src="${filePath}" alt="${documentName}">`;
+    } else {
+      contentBox.innerHTML = `
+        <div class="text-center p-4">
+          <i data-lucide="file-warning" style="width:48px; height:48px; color:var(--primary-color);"></i>
+          <p class="mt-2">Format file <strong>.${ext}</strong> tidak dapat di-preview secara langsung.</p>
+          <p class="text-muted">Silakan klik tombol download di atas untuk mengunduh dokumen.</p>
+        </div>
+      `;
+      lucide.createIcons();
+    }
   }
 
   modal.classList.add('active');
@@ -956,7 +1243,6 @@ function previewFile(filePath, documentName) {
 
 function closePreviewModal() {
   document.getElementById('modal-preview').classList.remove('active');
-  // Bersihkan iframe agar tidak loading di background
   document.getElementById('preview-content-box').innerHTML = '';
 }
 
@@ -971,31 +1257,34 @@ async function openSelectorModal(type, targetInputId) {
   container.innerHTML = '<div class="text-center text-muted py-4">Memuat nomor...</div>';
 
   try {
-    // 1. Ambil nomor yang digenerate dari API
-    const resNumbers = await fetch(`${API_BASE}/api/generated-numbers`);
-    const allGenerated = await resNumbers.json();
-    const filteredGenerated = allGenerated.filter(item => item.type === type);
-
-    // 2. Ambil dokumen yang sudah ada untuk memeriksa nomor terpakai
-    let resDocs;
+    // 1. Ambil nomor yang digenerate dari Firebase
+    const snapNumbers = await db.collection('generated_numbers').where('type', '==', type).get();
+    
+    // 2. Ambil dokumen terdaftar untuk memeriksa nomor terpakai
     let usedNumbers = new Set();
 
     if (type === 'masuk' || type === 'keluar') {
-      resDocs = await fetch(`${API_BASE}/api/surat?type=${type}`);
-      const docs = await resDocs.json();
-      docs.forEach(d => usedNumbers.add(d.number));
+      const snapDocs = await db.collection('surat').where('type', '==', type).get();
+      snapDocs.forEach(doc => usedNumbers.add(doc.data().number));
     } else if (type === 'quotation') {
-      resDocs = await fetch(`${API_BASE}/api/quotations`);
-      const docs = await resDocs.json();
-      docs.forEach(d => usedNumbers.add(d.number));
+      const snapDocs = await db.collection('quotations').get();
+      snapDocs.forEach(doc => usedNumbers.add(doc.data().number));
     } else if (type === 'invoicing') {
-      resDocs = await fetch(`${API_BASE}/api/invoices`);
-      const docs = await resDocs.json();
-      docs.forEach(d => usedNumbers.add(d.number));
+      const snapDocs = await db.collection('invoices').get();
+      snapDocs.forEach(doc => usedNumbers.add(doc.data().number));
     }
 
-    // 3. Filter nomor yang belum terpakai sama sekali
-    const unusedNumbers = filteredGenerated.filter(g => !usedNumbers.has(g.number));
+    // 3. Filter nomor generated yang belum digunakan
+    const unusedNumbers = [];
+    snapNumbers.forEach(doc => {
+      const data = doc.data();
+      if (!usedNumbers.has(data.number)) {
+        unusedNumbers.push(data);
+      }
+    });
+
+    // Urutkan nomor yang belum dipakai (descending)
+    unusedNumbers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     container.innerHTML = '';
 
@@ -1023,6 +1312,7 @@ async function openSelectorModal(type, targetInputId) {
 
     modal.classList.add('active');
   } catch(e) {
+    console.error(e);
     container.innerHTML = '<div class="text-center text-danger py-4">Gagal memuat nomor.</div>';
   }
 }
