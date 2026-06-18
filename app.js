@@ -252,6 +252,29 @@ function setupEventListeners() {
   document.getElementById('btn-use-gen-i').addEventListener('click', () => {
     openSelectorModal('invoicing', 'i-number');
   });
+
+  // Theme Toggle Listener
+  const themeBtn = document.getElementById('btn-theme-toggle');
+  if (themeBtn) {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    themeBtn.innerHTML = currentTheme === 'dark' ? '<i data-lucide="sun"></i>' : '<i data-lucide="moon"></i>';
+    try {
+      lucide.createIcons();
+    } catch(e) {}
+
+    themeBtn.addEventListener('click', () => {
+      const activeTheme = document.documentElement.getAttribute('data-theme') || 'light';
+      const nextTheme = activeTheme === 'light' ? 'dark' : 'light';
+      
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      localStorage.setItem('theme', nextTheme);
+      
+      themeBtn.innerHTML = nextTheme === 'dark' ? '<i data-lucide="sun"></i>' : '<i data-lucide="moon"></i>';
+      try {
+        lucide.createIcons();
+      } catch(e) {}
+    });
+  }
 }
 
 function setupSearchInput(id, callback) {

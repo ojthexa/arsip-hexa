@@ -11,6 +11,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Lucide Icons (untuk ikon minimalis) -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    // Inisialisasi tema sebelum halaman dirender untuk mencegah efek berkedip (flashing)
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
 </head>
 <body>
   <div class="app-container">
@@ -19,22 +24,23 @@
       <div class="sidebar-brand">
         <!-- SVG Logo HEXA Resmi -->
         <svg viewBox="0 0 160 50" width="160" height="50" xmlns="http://www.w3.org/2000/svg">
-          <!-- Icon Hexagon Geometris Merah -->
+          <!-- Icon Hexagon Geometris Merah (Rounded & Isometric) -->
           <g transform="translate(5, 5)">
-            <!-- Outer Hexagon -->
-            <path d="M 20 0 L 37.32 10 L 37.32 30 L 20 40 L 2.68 30 L 2.68 10 Z" fill="none" stroke="#D32F2F" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
-            <!-- Inner Y Spokes -->
-            <path d="M 20 20 L 20 40 M 20 20 L 2.68 10 M 20 20 L 37.32 10" fill="none" stroke="#D32F2F" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
-            <!-- Center Ring -->
-            <circle cx="20" cy="20" r="7.5" fill="#D32F2F"/>
-            <circle cx="20" cy="20" r="3" fill="#FFFFFF"/>
-            <!-- Face Chevrons to match the 3D cube look -->
-            <path d="M 20 10 L 28.66 15 L 28.66 25" fill="none" stroke="#D32F2F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" style="opacity: 0.85;"/>
-            <path d="M 11.34 25 L 11.34 15 L 20 10" fill="none" stroke="#D32F2F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" style="opacity: 0.85;"/>
-            <path d="M 11.34 25 L 20 30 L 28.66 25" fill="none" stroke="#D32F2F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" style="opacity: 0.85;"/>
+            <!-- Outer Red Rounded Hexagon -->
+            <path d="M 20 1.5 L 36.02 10.75 L 36.02 29.25 L 20 38.5 L 3.98 29.25 L 3.98 10.75 Z" fill="#D30000" stroke="#D30000" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+            <!-- Inner White Outline Hexagon -->
+            <path d="M 20 5 L 33 12.5 L 33 27.5 L 20 35 L 7 27.5 L 7 12.5 Z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round"/>
+            <!-- White Y Spokes -->
+            <path d="M 20 20 L 20 35 M 20 20 L 7 12.5 M 20 20 L 33 12.5" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <!-- Center Hub (White Outer Ring) -->
+            <circle cx="20" cy="20" r="7.5" fill="#FFFFFF"/>
+            <!-- Center Hub (Red Middle Ring) -->
+            <circle cx="20" cy="20" r="4.8" fill="#D30000"/>
+            <!-- Center Hub (White Core Dot) -->
+            <circle cx="20" cy="20" r="2.4" fill="#FFFFFF"/>
           </g>
           <!-- Brand Text HEXA -->
-          <text x="52" y="34" font-family="'Inter', system-ui, sans-serif" font-weight="800" font-size="23" fill="#000000" letter-spacing="1">HEXA</text>
+          <text x="52" y="34" font-family="'Inter', system-ui, sans-serif" font-weight="800" font-size="23" fill="currentColor" letter-spacing="1">HEXA</text>
         </svg>
       </div>
 
@@ -98,6 +104,9 @@
           <p id="header-subtitle">Manajemen Surat & Dokumen</p>
         </div>
         <div class="header-actions">
+          <button type="button" id="btn-theme-toggle" class="btn-icon-toggle-theme" title="Ubah Tema (Terang/Gelap)">
+            <i data-lucide="moon"></i>
+          </button>
           <div class="db-status-badge" style="cursor: pointer;" onclick="openDiagnosticModal()" title="Klik untuk cek status koneksi cloud">
             <span class="status-indicator online" id="conn-indicator"></span>
             <span id="conn-status-text">Memeriksa Koneksi...</span>
