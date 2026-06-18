@@ -102,6 +102,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (db) {
     initializeFirebaseAndLoad();
   } else {
+    const headerIndicator = document.getElementById('conn-indicator');
+    const headerText = document.getElementById('conn-status-text');
+    if (headerIndicator && headerText) {
+      headerIndicator.className = 'status-indicator';
+      headerIndicator.style.backgroundColor = '#d32f2f';
+      headerIndicator.style.boxShadow = '0 0 8px rgba(211, 47, 47, 0.4)';
+      headerText.innerText = 'Firebase SDK Eror';
+    }
     alert("Firebase SDK gagal dimuat. Periksa koneksi internet Anda atau matikan adblocker.");
   }
 });
@@ -110,6 +118,8 @@ async function initializeFirebaseAndLoad() {
   try {
     await initializeFirebaseDb();
     loadDashboardData();
+    // Jalankan tes diagnostik secara senyap untuk mengupdate indikator di header
+    runConnectionDiagnostics();
   } catch (err) {
     console.error("Gagal memuat data Firebase pada start-up:", err.message);
   }
@@ -1387,4 +1397,115 @@ function selectNumber(number) {
     currentSelectorTargetInput.value = number;
   }
   closeSelectorModal();
+}
+
+// ==========================================
+// 10. DIAGNOSTIC PANEL LOGIC
+// ==========================================
+function openDiagnosticModal() {
+  const modal = document.getElementById('modal-diagnostic');
+  modal.classList.add('active');
+  runConnectionDiagnostics();
+}
+
+function closeDiagnosticModal() {
+  document.getElementById('modal-diagnostic').classList.remove('active');
+}
+
+async function runConnectionDiagnostics() {
+  const badgeSdk = document.getElementById('diag-firebase-sdk');
+  const badgeFirestore = document.getElementById('diag-firestore');
+  const badgeCloudinary = document.getElementById('diag-cloudinary');
+  const errorBox = document.getElementById('diag-error-box');
+  const errorMsg = document.getElementById('diag-error-message');
+  const headerIndicator = document.getElementById('conn-indicator');
+  const headerText = document.getElementById('conn-status-text');
+
+  if (!badgeSdk || !badgeFirestore || !badgeCloudinary) return;
+
+  // Reset UI
+  badgeSdk.className = 'badge badge-status-draft';
+  badgeSdk.innerText = 'Memeriksa...';
+  badgeFirestore.className = 'badge badge-status-draft';
+  badgeFirestore.innerText = 'Memeriksa...';
+  badgeCloudinary.className = 'badge badge-status-draft';
+  badgeCloudinary.innerText = 'Memeriksa...';
+  errorBox.classList.add('hidden');
+  errorMsg.innerText = '-';
+
+  let sdkOk = false;
+  let firestoreOk = false;
+  let cloudinaryOk = false;
+  let errors = [];
+
+  // 1. Test Firebase SDK
+  try {
+    if (typeof firebase !== 'undefined' && firebase.initializeApp) {
+      badgeSdk.className = 'badge badge-status-accepted';
+      badgeSdk.innerText = 'TERPASANG (CDN OK)';
+      sdkOk = true;
+    } else {
+      badgeSdk.className = 'badge badge-status-rejected';
+      badgeSdk.innerText = 'EROR / DIBLOKIR';
+      errors.push("Firebase SDK tidak terdefinisi di browser. Kemungkinan diblokir oleh Adblocker atau browser tidak memiliki koneksi internet untuk mengunduh script dari gstatic.com.");
+    }
+  } catch(e) {
+    badgeSdk.className = 'badge badge-status-rejected';
+    badgeSdk.innerText = 'EROR';
+    errors.push("Gagal mengecek SDK: " + e.message);
+  }
+
+  // 2. Test Firestore Connection
+  if (sdkOk && db) {
+    try {
+      const testRef = db.collection('diagnostic_test').doc('ping');
+      await testRef.set({ time: Date.now(), test: true });
+      const doc = await testRef.get();
+      if (doc.exists && doc.data().test) {
+        badgeFirestore.className = 'badge badge-status-accepted';
+        badgeFirestore.innerText = 'TERHUBUNG (OK)';
+        firestoreOk = true;
+        await testRef.delete();
+      } else {
+        throw new Error("Gagal memverifikasi dokumen uji.");
+      }
+    } catch(e) {
+      badgeFirestore.className = 'badge badge-status-rejected';
+      badgeFirestore.innerText = 'KONEKSI GAGAL';
+      errors.push("Eror Firestore: " + e.message + "\n--> Solusi: Buka Firebase Console -> Firestore Database -> Rules. Ubah baris 'allow read, write: if false;' menjadi 'allow read, write: if true;' lalu klik Publish.");
+    }
+  } else {
+    badgeFirestore.className = 'badge badge-status-rejected';
+    badgeFirestore.innerText = 'BATAL (SDK GAGAL)';
+  }
+
+  // 3. Test Cloudinary Connection
+  try {
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/ping`, { method: 'GET', mode: 'no-cors' });
+    badgeCloudinary.className = 'badge badge-status-accepted';
+    badgeCloudinary.innerText = 'TERHUBUNG (OK)';
+    cloudinaryOk = true;
+  } catch(e) {
+    badgeCloudinary.className = 'badge badge-status-rejected';
+    badgeCloudinary.innerText = 'KONEKSI GAGAL';
+    errors.push("Eror Cloudinary: " + e.message + "\n--> Solusi: Periksa koneksi internet Anda atau pastikan nama cloud '" + cloudinaryConfig.cloudName + "' sudah benar.");
+  }
+
+  // Show error box if any error occurs
+  if (errors.length > 0) {
+    errorBox.classList.remove('hidden');
+    errorMsg.innerHTML = errors.map(err => err.replace(/\n/g, '<br>')).join('<br><br>');
+    
+    // Update Header Indicator to red/failed
+    headerIndicator.className = 'status-indicator';
+    headerIndicator.style.backgroundColor = '#d32f2f';
+    headerIndicator.style.boxShadow = '0 0 8px rgba(211, 47, 47, 0.4)';
+    headerText.innerText = 'Koneksi Cloud Eror';
+  } else {
+    // Update Header Indicator to green/success
+    headerIndicator.className = 'status-indicator online';
+    headerIndicator.style.backgroundColor = '#2e7d32';
+    headerIndicator.style.boxShadow = '0 0 8px rgba(46, 125, 50, 0.4)';
+    headerText.innerText = 'Koneksi Cloud Aktif';
+  }
 }

@@ -98,9 +98,9 @@
           <p id="header-subtitle">Manajemen Surat & Dokumen</p>
         </div>
         <div class="header-actions">
-          <div class="db-status-badge">
-            <span class="status-indicator online"></span>
-            <span>Database Lokal Aktif</span>
+          <div class="db-status-badge" style="cursor: pointer;" onclick="openDiagnosticModal()" title="Klik untuk cek status koneksi cloud">
+            <span class="status-indicator online" id="conn-indicator"></span>
+            <span id="conn-status-text">Memeriksa Koneksi...</span>
           </div>
         </div>
       </header>
@@ -725,6 +725,43 @@
           <!-- Dynamic List -->
           <div class="text-center text-muted py-4">Memuat nomor...</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: DIAGNOSTIK KONEKSI CLOUD
+       ========================================== -->
+  <div class="modal" id="modal-diagnostic">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Diagnostik Koneksi Cloud</h3>
+        <button class="modal-close" onclick="closeDiagnosticModal()"><i data-lucide="x"></i></button>
+      </div>
+      <div style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+        <p class="text-muted" style="font-size:12.5px;">Hasil pengetesan koneksi ke server cloud:</p>
+        
+        <div class="diagnostic-item" style="display:flex; justify-content:space-between; align-items:center; padding: 10px; border:1px solid var(--border-color); border-radius:6px;">
+          <strong>1. Firebase SDK (CDN):</strong>
+          <span id="diag-firebase-sdk" class="badge badge-status-draft">Memeriksa...</span>
+        </div>
+        
+        <div class="diagnostic-item" style="display:flex; justify-content:space-between; align-items:center; padding: 10px; border:1px solid var(--border-color); border-radius:6px;">
+          <strong>2. Database Cloud (Firestore):</strong>
+          <span id="diag-firestore" class="badge badge-status-draft">Memeriksa...</span>
+        </div>
+        
+        <div class="diagnostic-item" style="display:flex; justify-content:space-between; align-items:center; padding: 10px; border:1px solid var(--border-color); border-radius:6px;">
+          <strong>3. Cloud Storage (Cloudinary):</strong>
+          <span id="diag-cloudinary" class="badge badge-status-draft">Memeriksa...</span>
+        </div>
+        
+        <div id="diag-error-box" class="result-box hidden" style="text-align:left; background-color:#ffebee; border-color:#ffcdd2; color:#c62828; padding:12px;">
+          <strong style="font-size:13px;">Keterangan / Pesan Error:</strong>
+          <div id="diag-error-message" style="margin-top:5px; font-family:monospace; font-size:11px; word-break:break-all; line-height:1.4;">-</div>
+        </div>
+        
+        <button class="btn btn-primary btn-block" onclick="runConnectionDiagnostics()"><i data-lucide="refresh-cw"></i> Jalankan Uji Ulang</button>
       </div>
     </div>
   </div>
