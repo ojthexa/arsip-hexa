@@ -66,11 +66,14 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  padding: 20px 0;
+  padding: 0 0 20px 0;
 }
 
 .sidebar-brand {
-  padding: 0 20px 25px 20px;
+  height: 70px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 20px;
   color: var(--text-primary);
@@ -186,7 +189,8 @@ body {
 
 .main-header {
   background-color: var(--bg-primary);
-  padding: 15px 30px;
+  height: 70px;
+  padding: 0 30px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -841,16 +845,19 @@ body {
 
 .search-box i {
   position: absolute;
-  left: 12px;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 16px;
   height: 16px;
   color: var(--text-muted);
+  pointer-events: none;
 }
 
 .search-box input {
   font-family: var(--font-family);
   font-size: 13.5px;
-  padding: 8px 12px 8px 36px;
+  padding: 8px 12px 8px 48px;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   outline: none;
