@@ -11,18 +11,60 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let db = null;
-let storage = null;
 
 try {
   if (typeof firebase !== 'undefined') {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    storage = firebase.storage();
   } else {
     console.error("Firebase SDK tidak terdefinisi. Periksa koneksi internet atau pemblokir iklan.");
   }
 } catch (e) {
   console.error("Gagal menginisialisasi Firebase:", e.message);
+}
+
+// CLOUDINARY CONFIGURATION & HELPERS
+const cloudinaryConfig = {
+  cloudName: "dvioaqz1i",
+  apiKey: "319971473568786",
+  apiSecret: "FMLsvi-omSbeFkWeNxm7mm_7ozM"
+};
+
+async function sha1(string) {
+  const utf8 = new TextEncoder().encode(string);
+  const hashBuffer = await crypto.subtle.digest('SHA-1', utf8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+async function uploadToCloudinary(file, folder) {
+  const timestamp = Math.round(Date.now() / 1000);
+  const stringToSign = `folder=${folder}&timestamp=${timestamp}${cloudinaryConfig.apiSecret}`;
+  const signature = await sha1(stringToSign);
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folder', folder);
+  formData.append('timestamp', timestamp);
+  formData.append('api_key', cloudinaryConfig.apiKey);
+  formData.append('signature', signature);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/auto/upload`, {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!res.ok) {
+    const errData = await res.json();
+    throw new Error(errData.error ? errData.error.message : 'Gagal upload ke Cloudinary');
+  }
+
+  const data = await res.json();
+  return {
+    url: data.secure_url,
+    name: data.original_filename + '.' + data.format
+  };
 }
 
 // STATE GLOBAL
@@ -664,12 +706,10 @@ async function handleDocumentSubmit(e) {
     let filePath = '';
     let fileName = '';
 
-    // Upload file ke Firebase Storage jika ada file terpilih
+    // Upload file ke Cloudinary jika ada file terpilih
     if (file) {
-      const storageRef = storage.ref();
-      const fileRef = storageRef.child(`surat/${Date.now()}-${file.name}`);
-      const uploadTask = await fileRef.put(file);
-      filePath = await uploadTask.ref.getDownloadURL();
+      const uploadResult = await uploadToCloudinary(file, 'surat');
+      filePath = uploadResult.url;
       fileName = file.name;
     }
 
@@ -712,17 +752,12 @@ async function deleteSurat(id, type) {
   if (!confirm('Apakah Anda yakin ingin menghapus data surat ini?')) return;
 
   try {
-    const doc = await db.collection('surat').doc(id).get();
-    if (doc.exists && doc.data().filePath) {
-      // Hapus file dari Storage
-      try {
-        const fileRef = storage.refFromURL(doc.data().filePath);
-        await fileRef.delete();
-      } catch(err) {}
-    }
     await db.collection('surat').doc(id).delete();
     loadSuratData(type);
-  } catch(e) {}
+  } catch(e) {
+    console.error("Gagal menghapus surat:", e);
+    alert("Gagal menghapus surat: " + e.message);
+  }
 }
 
 
@@ -854,10 +889,8 @@ async function handleQuotationSubmit(e) {
     let fileName = '';
 
     if (file) {
-      const storageRef = storage.ref();
-      const fileRef = storageRef.child(`quotation/${Date.now()}-${file.name}`);
-      const uploadTask = await fileRef.put(file);
-      filePath = await uploadTask.ref.getDownloadURL();
+      const uploadResult = await uploadToCloudinary(file, 'quotation');
+      filePath = uploadResult.url;
       fileName = file.name;
     }
 
@@ -899,16 +932,12 @@ function editQuotation(id) {
 async function deleteQuotation(id) {
   if (!confirm('Apakah Anda yakin ingin menghapus quotation ini?')) return;
   try {
-    const doc = await db.collection('quotations').doc(id).get();
-    if (doc.exists && doc.data().filePath) {
-      try {
-        const fileRef = storage.refFromURL(doc.data().filePath);
-        await fileRef.delete();
-      } catch(err) {}
-    }
     await db.collection('quotations').doc(id).delete();
     loadQuotationData();
-  } catch(e) {}
+  } catch(e) {
+    console.error("Gagal menghapus quotation:", e);
+    alert("Gagal menghapus quotation: " + e.message);
+  }
 }
 
 
@@ -1040,10 +1069,8 @@ async function handleInvoiceSubmit(e) {
     let fileName = '';
 
     if (file) {
-      const storageRef = storage.ref();
-      const fileRef = storageRef.child(`invoicing/${Date.now()}-${file.name}`);
-      const uploadTask = await fileRef.put(file);
-      filePath = await uploadTask.ref.getDownloadURL();
+      const uploadResult = await uploadToCloudinary(file, 'invoicing');
+      filePath = uploadResult.url;
       fileName = file.name;
     }
 
@@ -1085,16 +1112,12 @@ function editInvoice(id) {
 async function deleteInvoice(id) {
   if (!confirm('Apakah Anda yakin ingin menghapus invoice ini?')) return;
   try {
-    const doc = await db.collection('invoices').doc(id).get();
-    if (doc.exists && doc.data().filePath) {
-      try {
-        const fileRef = storage.refFromURL(doc.data().filePath);
-        await fileRef.delete();
-      } catch(err) {}
-    }
     await db.collection('invoices').doc(id).delete();
     loadInvoiceData();
-  } catch(e) {}
+  } catch(e) {
+    console.error("Gagal menghapus invoice:", e);
+    alert("Gagal menghapus invoice: " + e.message);
+  }
 }
 
 
