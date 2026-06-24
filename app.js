@@ -640,9 +640,9 @@ async function loadDokumenData() {
       const item = doc.data();
       const actionCell = `
         <div class="action-buttons-group">
-          ${item.filePath ? `<button class="btn btn-small btn-outline" onclick="previewFile('${item.filePath}', '${item.title || 'Dokumen'}')" title="View Dokumen">View</button>` : ''}
-          <button class="btn btn-small btn-outline" onclick="openDokumenModal('${doc.id}')" title="Edit Dokumen">Edit</button>
-          <button class="btn btn-small btn-outline delete" onclick="deleteDokumen('${doc.id}')" title="Hapus Dokumen">Hapus</button>
+          ${item.filePath ? `<button class="btn btn-icon-only" onclick="previewFile('${item.filePath}', '${item.title || 'Dokumen'}')" title="View Dokumen"><i data-lucide="eye"></i></button>` : ''}
+          <button class="btn btn-icon-only" onclick="openDokumenModal('${doc.id}')" title="Edit Dokumen"><i data-lucide="edit-2"></i></button>
+          <button class="btn btn-icon-only delete" onclick="deleteDokumen('${doc.id}')" title="Hapus Dokumen"><i data-lucide="trash-2"></i></button>
         </div>
       `;
       const tr = document.createElement('tr');
