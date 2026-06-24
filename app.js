@@ -73,6 +73,7 @@ let cachedUnits = [];
 let cachedFormats = [];
 let currentSelectorTargetInput = null;
 let currentLocalPreviewUrl = null;
+let editingDokumenId = null;
 
 // AUTHENTICATION LOGIC
 function checkAuth() {
@@ -628,20 +629,19 @@ async function loadDokumenData() {
     tbody.innerHTML = '';
 
     if (snap.empty) {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center">Belum ada dokumen magang.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center">Belum ada dokumen magang.</td></tr>`;
       return;
     }
 
     snap.forEach(doc => {
       const item = doc.data();
-      const fileCell = item.filePath ? `
-        <a href="${item.filePath}" target="_blank" class="btn btn-outline btn-small">Lihat</a>
-      ` : '<span class="text-muted">Tidak ada file</span>';
-      const actionCell = item.filePath ? `
-        <button class="btn btn-icon-only" onclick="previewFile('${item.filePath}', '${item.title || 'Dokumen'}')" title="Preview File">
-          <i data-lucide="eye"></i>
-        </button>
-      ` : '';
+      const actionCell = `
+        <div class="action-buttons-group">
+          ${item.filePath ? `<button class="btn btn-icon-only" onclick="previewFile('${item.filePath}', '${item.title || 'Dokumen'}')" title="View Dokumen"><i data-lucide="eye"></i></button>` : ''}
+          <button class="btn btn-icon-only" onclick="editDokumen('${doc.id}')" title="Edit Dokumen"><i data-lucide="edit-2"></i></button>
+          <button class="btn btn-icon-only delete" onclick="deleteDokumen('${doc.id}')" title="Hapus Dokumen"><i data-lucide="trash-2"></i></button>
+        </div>
+      `;
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${item.title || '-'}</td>
@@ -649,7 +649,6 @@ async function loadDokumenData() {
         <td>${item.school || '-'}</td>
         <td>${item.period || '-'}</td>
         <td>${item.category || '-'}</td>
-        <td>${fileCell}</td>
         <td class="actions-column">${actionCell}</td>
       `;
       tbody.appendChild(tr);
@@ -694,9 +693,15 @@ async function handleTambahDokumenSubmit(e) {
       docData.fileType = file.type;
     }
 
-    await db.collection('dokumen_magang').add(docData);
+    if (editingDokumenId) {
+      await db.collection('dokumen_magang').doc(editingDokumenId).update(docData);
+      editingDokumenId = null;
+    } else {
+      await db.collection('dokumen_magang').add(docData);
+    }
 
     document.getElementById('form-tambah-dokumen').reset();
+    closeDokumenModal();
     loadDokumenData();
     alert('Data dokumen magang berhasil disimpan.');
   } catch (err) {
