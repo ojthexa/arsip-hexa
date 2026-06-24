@@ -640,7 +640,7 @@ async function loadDokumenData() {
       const item = doc.data();
       const actionCell = `
         <div class="action-buttons-group">
-          ${item.filePath ? `<button class="btn btn-icon-only" onclick="previewFile('${item.filePath}', '${item.title || 'Dokumen'}')" title="View Dokumen"><i data-lucide="eye"></i></button>` : ''}
+          ${item.filePath ? `<button class="btn btn-icon-only" onclick="previewFile('${item.filePath}', '${item.title || 'Dokumen'}', '${item.fileName || ''}')" title="View Dokumen"><i data-lucide="eye"></i></button>` : ''}
           <button class="btn btn-icon-only" onclick="openDokumenModal('${doc.id}')" title="Edit Dokumen"><i data-lucide="edit-2"></i></button>
           <button class="btn btn-icon-only delete" onclick="deleteDokumen('${doc.id}')" title="Hapus Dokumen"><i data-lucide="trash-2"></i></button>
         </div>
@@ -695,14 +695,7 @@ function openDokumenModal(id = null) {
       editingDokumenFileName = data.fileName || null;
       editingDokumenFileType = data.fileType || null;
 
-      const previewBox = document.getElementById('doc-file-upload-preview');
-      if (previewBox) {
-        if (editingDokumenFilePath) {
-          previewBox.innerHTML = `<div class="text-muted">File saat ini: <strong>${editingDokumenFileName || 'Dokumen'}</strong></div>`;
-        } else {
-          previewBox.innerHTML = '<p class="text-muted">Preview akan muncul setelah memilih file.</p>';
-        }
-      }
+      showFilePreview(editingDokumenFilePath, editingDokumenFileName, 'doc-file-upload-preview');
     }).catch(err => {
       console.error('Gagal memuat data dokumen untuk edit:', err);
     });
@@ -1016,7 +1009,7 @@ async function loadSuratData(type) {
         <td class="actions-column">
           <div class="action-buttons-group">
             ${item.filePath ? `
-              <button class="btn-icon-only" onclick="previewFile('${item.filePath}', '${item.number}')" title="Preview File">
+              <button class="btn-icon-only" onclick="previewFile('${item.filePath}', '${item.number}', '${item.fileName || ''}')" title="Preview File">
                 <i data-lucide="eye"></i>
               </button>
             ` : ''}
@@ -1088,18 +1081,17 @@ async function openDocModal(type, editId = null) {
         document.getElementById('doc-sender').value = current.senderOrReceiver;
         document.getElementById('doc-subject').value = current.subject;
         if (current.fileName) {
-          let previewBtnHtml = '';
-          if (current.filePath) {
-            previewBtnHtml = `<button type="button" class="btn btn-outline btn-small px-2 py-1 ms-2" style="display:inline-flex; align-items:center; gap:4px;" onclick="previewFile('${current.filePath}', '${current.number}')"><i data-lucide="eye" style="width:14px; height:14px;"></i> Preview</button>`;
-          }
-          document.getElementById('doc-file-info').innerHTML = `File saat ini: <strong>${current.fileName}</strong>${previewBtnHtml} <br><small class="text-muted">(Unggah lagi untuk mengganti)</small>`;
+          document.getElementById('doc-file-info').innerHTML = `File saat ini: <strong>${current.fileName}</strong> <br><small class="text-muted">(Unggah lagi untuk mengganti)</small>`;
+          showFilePreview(current.filePath, current.fileName, 'doc-file-preview');
         } else {
           document.getElementById('doc-file-info').innerText = '';
+          showFilePreview(null, null, 'doc-file-preview');
         }
       }
     } catch(e) {}
   } else {
     document.getElementById('doc-file-info').innerText = 'File akan disimpan di Cloud Storage (Cloudinary).';
+    showFilePreview(null, null, 'doc-file-preview');
   }
 
   modal.classList.add('active');
@@ -1235,7 +1227,7 @@ async function loadQuotationData() {
         <td class="actions-column">
           <div class="action-buttons-group">
             ${item.filePath ? `
-              <button class="btn-icon-only" onclick="previewFile('${item.filePath}', '${item.number}')" title="Preview File">
+              <button class="btn-icon-only" onclick="previewFile('${item.filePath}', '${item.number}', '${item.fileName || ''}')" title="Preview File">
                 <i data-lucide="eye"></i>
               </button>
             ` : ''}
@@ -1282,18 +1274,17 @@ async function openQuotationModal(editId = null) {
         document.getElementById('q-status').value = current.status;
         document.getElementById('q-subject').value = current.subject;
         if (current.fileName) {
-          let previewBtnHtml = '';
-          if (current.filePath) {
-            previewBtnHtml = `<button type="button" class="btn btn-outline btn-small px-2 py-1 ms-2" style="display:inline-flex; align-items:center; gap:4px;" onclick="previewFile('${current.filePath}', '${current.number}')"><i data-lucide="eye" style="width:14px; height:14px;"></i> Preview</button>`;
-          }
-          document.getElementById('q-file-info').innerHTML = `File saat ini: <strong>${current.fileName}</strong>${previewBtnHtml} <br><small class="text-muted">(Unggah lagi untuk mengganti)</small>`;
+          document.getElementById('q-file-info').innerHTML = `File saat ini: <strong>${current.fileName}</strong> <br><small class="text-muted">(Unggah lagi untuk mengganti)</small>`;
+          showFilePreview(current.filePath, current.fileName, 'q-file-preview');
         } else {
           document.getElementById('q-file-info').innerText = '';
+          showFilePreview(null, null, 'q-file-preview');
         }
       }
     } catch(e) {}
   } else {
     document.getElementById('q-file-info').innerText = 'File akan disimpan di Cloud Storage (Cloudinary).';
+    showFilePreview(null, null, 'q-file-preview');
   }
 
   modal.classList.add('active');
@@ -1427,7 +1418,7 @@ async function loadInvoiceData() {
         <td class="actions-column">
           <div class="action-buttons-group">
             ${item.filePath ? `
-              <button class="btn-icon-only" onclick="previewFile('${item.filePath}', '${item.number}')" title="Preview File">
+              <button class="btn-icon-only" onclick="previewFile('${item.filePath}', '${item.number}', '${item.fileName || ''}')" title="Preview File">
                 <i data-lucide="eye"></i>
               </button>
             ` : ''}
@@ -1475,18 +1466,17 @@ async function openInvoiceModal(editId = null) {
         document.getElementById('i-client').value = current.client;
         document.getElementById('i-status').value = current.status;
         if (current.fileName) {
-          let previewBtnHtml = '';
-          if (current.filePath) {
-            previewBtnHtml = `<button type="button" class="btn btn-outline btn-small px-2 py-1 ms-2" style="display:inline-flex; align-items:center; gap:4px;" onclick="previewFile('${current.filePath}', '${current.number}')"><i data-lucide="eye" style="width:14px; height:14px;"></i> Preview</button>`;
-          }
-          document.getElementById('i-file-info').innerHTML = `File saat ini: <strong>${current.fileName}</strong>${previewBtnHtml} <br><small class="text-muted">(Unggah lagi untuk mengganti)</small>`;
+          document.getElementById('i-file-info').innerHTML = `File saat ini: <strong>${current.fileName}</strong> <br><small class="text-muted">(Unggah lagi untuk mengganti)</small>`;
+          showFilePreview(current.filePath, current.fileName, 'i-file-preview');
         } else {
           document.getElementById('i-file-info').innerText = '';
+          showFilePreview(null, null, 'i-file-preview');
         }
       }
     } catch(e) {}
   } else {
     document.getElementById('i-file-info').innerText = 'File akan disimpan di Cloud Storage (Cloudinary).';
+    showFilePreview(null, null, 'i-file-preview');
   }
 
   modal.classList.add('active');
@@ -2142,7 +2132,38 @@ async function saveFormat(id) {
 // ==========================================
 // 8. PREVIEW FILE LOGIC
 // ==========================================
-function previewFile(filePath, documentName) {
+function showFilePreview(filePath, fileName, previewBoxId) {
+  const previewBox = document.getElementById(previewBoxId);
+  if (!previewBox) return;
+
+  if (!filePath) {
+    previewBox.innerHTML = '<p class="text-muted">Preview akan muncul setelah memilih file.</p>';
+    return;
+  }
+
+  // Extract extension
+  const cleanPath = filePath.split('?')[0];
+  let ext = cleanPath.split('.').pop().toLowerCase();
+  
+  if (fileName) {
+    const cleanFileName = fileName.split('?')[0];
+    const fileExt = cleanFileName.split('.').pop().toLowerCase();
+    if (fileExt) ext = fileExt;
+  }
+
+  const isImage = ['jpg','jpeg','png','gif','svg','webp'].includes(ext);
+  const isPdf = ext === 'pdf' || filePath.toLowerCase().includes('pdf') || (fileName && fileName.toLowerCase().includes('pdf'));
+
+  if (isPdf) {
+    previewBox.innerHTML = `<iframe src="${filePath}" title="Preview PDF"></iframe>`;
+  } else if (isImage) {
+    previewBox.innerHTML = `<img src="${filePath}" alt="Preview Gambar">`;
+  } else {
+    previewBox.innerHTML = `<div class="text-center text-muted">Format file .${ext} tidak didukung untuk preview.</div>`;
+  }
+}
+
+function previewFile(filePath, documentName, fileName = '') {
   const modal = document.getElementById('modal-preview');
   document.getElementById('modal-preview-title').innerText = `Preview: ${documentName}`;
   
@@ -2156,30 +2177,31 @@ function previewFile(filePath, documentName) {
   const contentBox = document.getElementById('preview-content-box');
   contentBox.innerHTML = '';
 
-  // Extract file extension from Cloudinary or Firebase URL
-  const cleanPath = filePath.split('?')[0];
-  const ext = cleanPath.split('.').pop().toLowerCase();
+  // Extract file extension
+  let ext = '';
+  if (fileName) {
+    ext = fileName.split('.').pop().toLowerCase();
+  } else {
+    const cleanPath = filePath.split('?')[0];
+    ext = cleanPath.split('.').pop().toLowerCase();
+  }
   
-  if (ext === 'pdf') {
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext);
+  const isPdf = ext === 'pdf' || filePath.toLowerCase().includes('pdf') || (fileName && fileName.toLowerCase().includes('pdf'));
+
+  if (isPdf) {
     contentBox.innerHTML = `<iframe src="${filePath}"></iframe>`;
-  } else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) {
+  } else if (isImage) {
     contentBox.innerHTML = `<img src="${filePath}" alt="${documentName}">`;
   } else {
-    // Check if URL contains markers of PDF or image
-    if (filePath.includes('.pdf') || filePath.toLowerCase().includes('pdf')) {
-      contentBox.innerHTML = `<iframe src="${filePath}"></iframe>`;
-    } else if (filePath.match(/\.(jpg|jpeg|png|gif|svg|webp)/i)) {
-      contentBox.innerHTML = `<img src="${filePath}" alt="${documentName}">`;
-    } else {
-      contentBox.innerHTML = `
-        <div class="text-center p-4">
-          <i data-lucide="file-warning" style="width:48px; height:48px; color:var(--primary-color);"></i>
-          <p class="mt-2">Format file <strong>.${ext}</strong> tidak dapat di-preview secara langsung.</p>
-          <p class="text-muted">Silakan gunakan tombol unduh atau buka di tab baru untuk melihat file.</p>
-        </div>
-      `;
-      lucide.createIcons();
-    }
+    contentBox.innerHTML = `
+      <div class="text-center p-4">
+        <i data-lucide="file-warning" style="width:48px; height:48px; color:var(--primary-color);"></i>
+        <p class="mt-2">Format file <strong>.${ext}</strong> tidak dapat di-preview secara langsung.</p>
+        <p class="text-muted">Silakan gunakan tombol unduh atau buka di tab baru untuk melihat file.</p>
+      </div>
+    `;
+    lucide.createIcons();
   }
 
   modal.classList.add('active');
