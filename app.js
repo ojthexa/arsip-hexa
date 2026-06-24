@@ -74,6 +74,9 @@ let cachedFormats = [];
 let currentSelectorTargetInput = null;
 let currentLocalPreviewUrl = null;
 let editingDokumenId = null;
+let editingDokumenFilePath = null;
+let editingDokumenFileName = null;
+let editingDokumenFileType = null;
 
 // AUTHENTICATION LOGIC
 function checkAuth() {
@@ -637,9 +640,9 @@ async function loadDokumenData() {
       const item = doc.data();
       const actionCell = `
         <div class="action-buttons-group">
-          ${item.filePath ? `<button class="btn btn-icon-only" onclick="previewFile('${item.filePath}', '${item.title || 'Dokumen'}')" title="View Dokumen"><i data-lucide="eye"></i></button>` : ''}
-          <button class="btn btn-icon-only" onclick="editDokumen('${doc.id}')" title="Edit Dokumen"><i data-lucide="edit-2"></i></button>
-          <button class="btn btn-icon-only delete" onclick="deleteDokumen('${doc.id}')" title="Hapus Dokumen"><i data-lucide="trash-2"></i></button>
+          ${item.filePath ? `<button class="btn btn-small btn-outline" onclick="previewFile('${item.filePath}', '${item.title || 'Dokumen'}')" title="View Dokumen">View</button>` : ''}
+          <button class="btn btn-small btn-outline" onclick="openDokumenModal('${doc.id}')" title="Edit Dokumen">Edit</button>
+          <button class="btn btn-small btn-outline delete" onclick="deleteDokumen('${doc.id}')" title="Hapus Dokumen">Hapus</button>
         </div>
       `;
       const tr = document.createElement('tr');
@@ -657,6 +660,72 @@ async function loadDokumenData() {
     lucide.createIcons();
   } catch (err) {
     console.error('Gagal memuat data dokumen magang:', err);
+  }
+}
+
+function resetDokumenModal() {
+  editingDokumenId = null;
+  editingDokumenFilePath = null;
+  editingDokumenFileName = null;
+  editingDokumenFileType = null;
+  const form = document.getElementById('form-tambah-dokumen');
+  form.reset();
+  document.getElementById('modal-dokumen-title').innerText = 'Tambah Dokumen Magang';
+  const previewBox = document.getElementById('doc-file-upload-preview');
+  if (previewBox) previewBox.innerHTML = '<p class="text-muted">Preview akan muncul setelah memilih file.</p>';
+}
+
+function openDokumenModal(id = null) {
+  resetDokumenModal();
+  const modal = document.getElementById('modal-dokumen');
+  if (!modal) return;
+
+  if (id) {
+    editingDokumenId = id;
+    document.getElementById('modal-dokumen-title').innerText = 'Edit Dokumen Magang';
+    db.collection('dokumen_magang').doc(id).get().then(doc => {
+      if (!doc.exists) return;
+      const data = doc.data();
+      document.getElementById('doc-title').value = data.title || '';
+      document.getElementById('doc-participant').value = data.participant || '';
+      document.getElementById('doc-school').value = data.school || '';
+      document.getElementById('doc-period').value = data.period || '';
+      document.getElementById('doc-category').value = data.category || '';
+      editingDokumenFilePath = data.filePath || null;
+      editingDokumenFileName = data.fileName || null;
+      editingDokumenFileType = data.fileType || null;
+
+      const previewBox = document.getElementById('doc-file-upload-preview');
+      if (previewBox) {
+        if (editingDokumenFilePath) {
+          previewBox.innerHTML = `<div class="text-muted">File saat ini: <strong>${editingDokumenFileName || 'Dokumen'}</strong></div>`;
+        } else {
+          previewBox.innerHTML = '<p class="text-muted">Preview akan muncul setelah memilih file.</p>';
+        }
+      }
+    }).catch(err => {
+      console.error('Gagal memuat data dokumen untuk edit:', err);
+    });
+  }
+
+  modal.classList.add('active');
+}
+
+function closeDokumenModal() {
+  const modal = document.getElementById('modal-dokumen');
+  if (modal) modal.classList.remove('active');
+  resetDokumenModal();
+}
+
+async function deleteDokumen(id) {
+  if (!confirm('Apakah Anda yakin ingin menghapus dokumen magang ini?')) return;
+  try {
+    await db.collection('dokumen_magang').doc(id).delete();
+    loadDokumenData();
+    alert('Dokumen magang berhasil dihapus.');
+  } catch (err) {
+    console.error('Gagal menghapus dokumen magang:', err);
+    alert('Gagal menghapus dokumen. Silakan coba lagi.');
   }
 }
 
@@ -691,6 +760,10 @@ async function handleTambahDokumenSubmit(e) {
       docData.filePath = uploadResult.url;
       docData.fileName = uploadResult.name;
       docData.fileType = file.type;
+    } else if (editingDokumenId && editingDokumenFilePath) {
+      docData.filePath = editingDokumenFilePath;
+      docData.fileName = editingDokumenFileName;
+      docData.fileType = editingDokumenFileType;
     }
 
     if (editingDokumenId) {
