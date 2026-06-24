@@ -287,6 +287,8 @@ function switchPage(pageId) {
     loadQuotationData();
   } else if (pageId === 'invoicing') {
     loadInvoiceData();
+  } else if (pageId === 'dokumen') {
+    loadDokumenData();
   } else if (pageId === 'unit') {
     loadUnitData();
   } else if (pageId === 'format-nomor') {
@@ -317,6 +319,9 @@ function setupEventListeners() {
   document.getElementById('form-generator').addEventListener('submit', handleGenerateNumber);
   document.getElementById('gen-type').addEventListener('change', handleGenTypeChange);
   
+  // Form Dokumen Magang
+  document.getElementById('form-tambah-dokumen').addEventListener('submit', handleTambahDokumenSubmit);
+
   // Copy Number Button
   document.getElementById('btn-copy-number').addEventListener('click', () => {
     const num = document.getElementById('generated-number-value').innerText;
@@ -575,6 +580,67 @@ async function loadGeneratorData() {
     await loadLetterCategoriesDatalist();
     fetchGeneratedNumbers();
   } catch (e) {}
+}
+
+async function loadDokumenData() {
+  try {
+    const snap = await db.collection('dokumen_magang').orderBy('createdAt', 'desc').get();
+    const tbody = document.getElementById('table-dokumen-body');
+    tbody.innerHTML = '';
+
+    if (snap.empty) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center">Belum ada dokumen magang.</td></tr>`;
+      return;
+    }
+
+    snap.forEach(doc => {
+      const item = doc.data();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.title || '-'}</td>
+        <td>${item.participant || '-'}</td>
+        <td>${item.school || '-'}</td>
+        <td>${item.period || '-'}</td>
+        <td>${item.category || '-'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error('Gagal memuat data dokumen magang:', err);
+  }
+}
+
+async function handleTambahDokumenSubmit(e) {
+  e.preventDefault();
+
+  const title = document.getElementById('doc-title').value.trim();
+  const participant = document.getElementById('doc-participant').value.trim();
+  const school = document.getElementById('doc-school').value.trim();
+  const period = document.getElementById('doc-period').value.trim();
+  const category = document.getElementById('doc-category').value;
+
+  if (!title || !participant || !school || !period || !category) {
+    alert('Semua field wajib diisi sebelum menyimpan dokumen.');
+    return;
+  }
+
+  try {
+    await db.collection('dokumen_magang').add({
+      title,
+      participant,
+      school,
+      period,
+      category,
+      createdAt: new Date().toISOString()
+    });
+
+    document.getElementById('form-tambah-dokumen').reset();
+    loadDokumenData();
+    alert('Data dokumen magang berhasil disimpan.');
+  } catch (err) {
+    console.error('Gagal menyimpan dokumen magang:', err);
+    alert('Terjadi kesalahan saat menyimpan data. Coba lagi nanti.');
+  }
 }
 
 async function loadUnitsDropdown(selectId) {

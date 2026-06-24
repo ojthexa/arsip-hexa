@@ -79,6 +79,10 @@
           <i data-lucide="hash"></i>
           <span>Generator Nomor</span>
         </a>
+        <a href="#" class="nav-item" data-page="dokumen">
+          <i data-lucide="file-text"></i>
+          <span>Dokumen Magang</span>
+        </a>
         <a href="#" class="nav-item" data-page="surat-masuk">
           <i data-lucide="mail-check"></i>
           <span>Surat Masuk</span>
@@ -292,6 +296,73 @@
                   </thead>
                   <tbody id="table-generated-numbers-body">
                     <tr><td colspan="5" class="text-center">Memuat riwayat...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             DOKUMEN MAGANG PAGE
+             ========================================== -->
+        <section id="page-dokumen" class="page-section">
+          <div class="split-layout">
+            <div class="form-card">
+              <div class="card-header">
+                <h3>Tambah Dokumen Magang</h3>
+                <p>Isi data dokumen untuk arsip magang peserta.</p>
+              </div>
+              <form id="form-tambah-dokumen" class="classic-form">
+                <div class="form-group">
+                  <label for="doc-title">Nama Dokumen <span class="required">*</span></label>
+                  <input type="text" id="doc-title" placeholder="Contoh: Laporan Magang" required>
+                </div>
+                <div class="form-group">
+                  <label for="doc-participant">Nama Peserta Magang <span class="required">*</span></label>
+                  <input type="text" id="doc-participant" placeholder="Contoh: Budi Santoso" required>
+                </div>
+                <div class="form-group">
+                  <label for="doc-school">Asal Sekolah <span class="required">*</span></label>
+                  <input type="text" id="doc-school" placeholder="Contoh: SMK Negeri 1 Jakarta" required>
+                </div>
+                <div class="form-group">
+                  <label for="doc-period">Periode Magang <span class="required">*</span></label>
+                  <input type="text" id="doc-period" placeholder="Contoh: Januari - Maret 2026" required>
+                </div>
+                <div class="form-group">
+                  <label for="doc-category">Kategori Dokumen <span class="required">*</span></label>
+                  <select id="doc-category" required>
+                    <option value="" disabled selected>Pilih kategori...</option>
+                    <option value="Laporan">Laporan</option>
+                    <option value="Proposal">Proposal</option>
+                    <option value="Sertifikat">Sertifikat</option>
+                  </select>
+                </div>
+                <div class="modal-footer" style="justify-content: flex-start; gap: 10px; padding: 0;">
+                  <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Simpan Data</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="table-card">
+              <div class="card-header">
+                <h3>Riwayat Dokumen Magang</h3>
+                <p>Dokumen yang telah tersimpan di arsip lokal.</p>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nama Dokumen</th>
+                      <th>Nama Peserta</th>
+                      <th>Asal Sekolah</th>
+                      <th>Periode</th>
+                      <th>Kategori</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-dokumen-body">
+                    <tr><td colspan="5" class="text-center">Belum ada dokumen magang.</td></tr>
                   </tbody>
                 </table>
               </div>
