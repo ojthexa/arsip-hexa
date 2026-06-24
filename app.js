@@ -72,6 +72,7 @@ let activePage = 'dashboard';
 let cachedUnits = [];
 let cachedFormats = [];
 let currentSelectorTargetInput = null;
+let currentLocalPreviewUrl = null;
 
 // AUTHENTICATION LOGIC
 function checkAuth() {
@@ -321,6 +322,7 @@ function setupEventListeners() {
   
   // Form Dokumen Magang
   document.getElementById('form-tambah-dokumen').addEventListener('submit', handleTambahDokumenSubmit);
+  setupFilePreviewListener('doc-file-upload', 'doc-file-upload-preview');
 
   // Copy Number Button
   document.getElementById('btn-copy-number').addEventListener('click', () => {
@@ -343,8 +345,13 @@ function setupEventListeners() {
 
   // Form Submit Handler
   document.getElementById('form-document').addEventListener('submit', handleDocumentSubmit);
+  setupFilePreviewListener('doc-file', 'doc-file-preview');
+
   document.getElementById('form-quotation').addEventListener('submit', handleQuotationSubmit);
+  setupFilePreviewListener('q-file', 'q-file-preview');
+
   document.getElementById('form-invoice').addEventListener('submit', handleInvoiceSubmit);
+  setupFilePreviewListener('i-file', 'i-file-preview');
 
   // Selector Nomor Buttons
   document.getElementById('btn-use-gen-number').addEventListener('click', () => {
@@ -382,6 +389,38 @@ function setupEventListeners() {
       } catch(e) {}
     });
   }
+}
+
+function setupFilePreviewListener(inputId, previewBoxId) {
+  const input = document.getElementById(inputId);
+  const previewBox = document.getElementById(previewBoxId);
+  if (!input || !previewBox) return;
+
+  input.addEventListener('change', () => {
+    if (currentLocalPreviewUrl) {
+      URL.revokeObjectURL(currentLocalPreviewUrl);
+      currentLocalPreviewUrl = null;
+    }
+
+    const file = input.files && input.files[0];
+    if (!file) {
+      previewBox.innerHTML = '<p class="text-muted">Preview akan muncul setelah memilih file.</p>';
+      return;
+    }
+
+    currentLocalPreviewUrl = URL.createObjectURL(file);
+    const ext = file.name.split('.').pop().toLowerCase();
+    const isImage = ['jpg','jpeg','png','gif','svg','webp'].includes(ext);
+    const isPdf = ext === 'pdf';
+
+    if (isPdf) {
+      previewBox.innerHTML = `<iframe src="${currentLocalPreviewUrl}" title="Preview PDF"></iframe>`;
+    } else if (isImage) {
+      previewBox.innerHTML = `<img src="${currentLocalPreviewUrl}" alt="Preview Gambar">`;
+    } else {
+      previewBox.innerHTML = `<div class="text-center text-muted">Format file .${ext} tidak didukung untuk preview.</div>`;
+    }
+  });
 }
 
 function setupSearchInput(id, callback) {
@@ -589,12 +628,20 @@ async function loadDokumenData() {
     tbody.innerHTML = '';
 
     if (snap.empty) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center">Belum ada dokumen magang.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center">Belum ada dokumen magang.</td></tr>`;
       return;
     }
 
     snap.forEach(doc => {
       const item = doc.data();
+      const fileCell = item.filePath ? `
+        <a href="${item.filePath}" target="_blank" class="btn btn-outline btn-small">Lihat</a>
+      ` : '<span class="text-muted">Tidak ada file</span>';
+      const actionCell = item.filePath ? `
+        <button class="btn btn-icon-only" onclick="previewFile('${item.filePath}', '${item.title || 'Dokumen'}')" title="Preview File">
+          <i data-lucide="eye"></i>
+        </button>
+      ` : '';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${item.title || '-'}</td>
@@ -602,9 +649,13 @@ async function loadDokumenData() {
         <td>${item.school || '-'}</td>
         <td>${item.period || '-'}</td>
         <td>${item.category || '-'}</td>
+        <td>${fileCell}</td>
+        <td class="actions-column">${actionCell}</td>
       `;
       tbody.appendChild(tr);
     });
+
+    lucide.createIcons();
   } catch (err) {
     console.error('Gagal memuat data dokumen magang:', err);
   }
@@ -618,6 +669,8 @@ async function handleTambahDokumenSubmit(e) {
   const school = document.getElementById('doc-school').value.trim();
   const period = document.getElementById('doc-period').value.trim();
   const category = document.getElementById('doc-category').value;
+  const fileInput = document.getElementById('doc-file-upload');
+  const file = fileInput ? fileInput.files[0] : null;
 
   if (!title || !participant || !school || !period || !category) {
     alert('Semua field wajib diisi sebelum menyimpan dokumen.');
@@ -625,14 +678,23 @@ async function handleTambahDokumenSubmit(e) {
   }
 
   try {
-    await db.collection('dokumen_magang').add({
+    const docData = {
       title,
       participant,
       school,
       period,
       category,
       createdAt: new Date().toISOString()
-    });
+    };
+
+    if (file) {
+      const uploadResult = await uploadToCloudinary(file, 'dokumen_magang');
+      docData.filePath = uploadResult.url;
+      docData.fileName = uploadResult.name;
+      docData.fileType = file.type;
+    }
+
+    await db.collection('dokumen_magang').add(docData);
 
     document.getElementById('form-tambah-dokumen').reset();
     loadDokumenData();
