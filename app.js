@@ -418,7 +418,13 @@ function setupFilePreviewListener(inputId, previewBoxId) {
     const isPdf = ext === 'pdf';
 
     if (isPdf) {
-      previewBox.innerHTML = `<iframe src="${currentLocalPreviewUrl}" title="Preview PDF"></iframe>`;
+      previewBox.innerHTML = `
+        <object data="${currentLocalPreviewUrl}" type="application/pdf" width="100%" height="100%">
+          <iframe src="${currentLocalPreviewUrl}" title="Preview PDF" style="border:none;">
+            <p class="p-2 text-center text-muted">Preview PDF tidak didukung oleh browser Anda. <a href="${currentLocalPreviewUrl}" target="_blank">Buka file</a>.</p>
+          </iframe>
+        </object>
+      `;
     } else if (isImage) {
       previewBox.innerHTML = `<img src="${currentLocalPreviewUrl}" alt="Preview Gambar">`;
     } else {
@@ -2155,7 +2161,13 @@ function showFilePreview(filePath, fileName, previewBoxId) {
   const isPdf = ext === 'pdf' || filePath.toLowerCase().includes('pdf') || (fileName && fileName.toLowerCase().includes('pdf'));
 
   if (isPdf) {
-    previewBox.innerHTML = `<iframe src="${filePath}" title="Preview PDF"></iframe>`;
+    previewBox.innerHTML = `
+      <object data="${filePath}" type="application/pdf" width="100%" height="100%">
+        <iframe src="${filePath}" title="Preview PDF" style="border:none;">
+          <p class="p-2 text-center text-muted">Preview PDF tidak didukung oleh browser Anda. <a href="${filePath}" target="_blank">Unduh PDF</a>.</p>
+        </iframe>
+      </object>
+    `;
   } else if (isImage) {
     previewBox.innerHTML = `<img src="${filePath}" alt="Preview Gambar">`;
   } else {
@@ -2190,7 +2202,16 @@ function previewFile(filePath, documentName, fileName = '') {
   const isPdf = ext === 'pdf' || filePath.toLowerCase().includes('pdf') || (fileName && fileName.toLowerCase().includes('pdf'));
 
   if (isPdf) {
-    contentBox.innerHTML = `<iframe src="${filePath}"></iframe>`;
+    contentBox.innerHTML = `
+      <object data="${filePath}" type="application/pdf" width="100%" height="100%">
+        <iframe src="${filePath}" style="border:none;">
+          <div class="text-center p-4">
+            <p>Preview PDF tidak didukung oleh browser Anda.</p>
+            <a href="${filePath}" target="_blank" class="btn btn-primary btn-small mt-2">Buka PDF di Tab Baru</a>
+          </div>
+        </iframe>
+      </object>
+    `;
   } else if (isImage) {
     contentBox.innerHTML = `<img src="${filePath}" alt="${documentName}">`;
   } else {

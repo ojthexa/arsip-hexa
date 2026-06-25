@@ -1017,18 +1017,22 @@ body {
 .preview-content-box {
   flex-grow: 1;
   width: 100%;
+  min-height: 500px;
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 4px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: auto;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+  overflow: hidden;
 }
 
-.preview-content-box iframe {
+.preview-content-box iframe,
+.preview-content-box object {
   width: 100%;
   height: 100%;
+  min-height: 500px;
   border: none;
 }
 
@@ -1052,7 +1056,8 @@ body {
   font-size: 12px;
 }
 
-.file-input-preview iframe {
+.file-input-preview iframe,
+.file-input-preview object {
   width: 100%;
   height: 260px;
   border: none;
