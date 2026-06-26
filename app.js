@@ -252,6 +252,20 @@ async function initializeFirebaseDb() {
         await db.collection('letter_categories').add(cat);
       }
     }
+
+    // 6. Inisialisasi Kategori Proposal (dokumen magang) jika kosong
+    const proposalCatsSnap = await db.collection('proposal_categories').get();
+    if (proposalCatsSnap.empty) {
+      const defaultProposalCats = [
+        { name: 'Laporan', code: 'LAP' },
+        { name: 'Proposal', code: 'PRO' },
+        { name: 'Sertifikat', code: 'SRT' },
+        { name: 'Source Code', code: 'SRC' }
+      ];
+      for (const cat of defaultProposalCats) {
+        await db.collection('proposal_categories').add(cat);
+      }
+    }
   } catch (err) {
     console.error('Firebase DB initialization error:', err.message);
   }
@@ -300,6 +314,8 @@ function switchPage(pageId) {
     loadFormatData();
   } else if (pageId === 'kategori-surat') {
     loadKategoriSuratData();
+  } else if (pageId === 'kategori-proposal') {
+    loadKategoriProposalData();
   } else if (pageId === 'klien') {
     loadKlienData();
   }
@@ -319,6 +335,10 @@ function setupEventListeners() {
   // Form Kategori Surat
   document.getElementById('form-kategori-surat').addEventListener('submit', handleKategoriSuratSubmit);
   document.getElementById('btn-cancel-kat-surat').addEventListener('click', resetKategoriSuratForm);
+
+  // Form Kategori Proposal
+  document.getElementById('form-kategori-proposal').addEventListener('submit', handleKategoriProposalSubmit);
+  document.getElementById('btn-cancel-kat-proposal').addEventListener('click', resetKategoriProposalForm);
 
   // Form Generator Nomor
   document.getElementById('form-generator').addEventListener('submit', handleGenerateNumber);
@@ -416,6 +436,7 @@ function setupFilePreviewListener(inputId, previewBoxId) {
     const ext = file.name.split('.').pop().toLowerCase();
     const isImage = ['jpg','jpeg','png','gif','svg','webp'].includes(ext);
     const isPdf = ext === 'pdf';
+    const isZip = ['zip', 'rar', '7z', 'gz', 'tar'].includes(ext);
 
     if (isPdf) {
       previewBox.innerHTML = `
@@ -427,6 +448,9 @@ function setupFilePreviewListener(inputId, previewBoxId) {
       `;
     } else if (isImage) {
       previewBox.innerHTML = `<img src="${currentLocalPreviewUrl}" alt="Preview Gambar">`;
+    } else if (isZip) {
+      previewBox.innerHTML = `<div class="text-center text-muted"><i data-lucide="file-archive" style="width:36px;height:36px;color:var(--primary-color);"></i><p class="mt-2">File arsip <strong>.${ext}</strong> berhasil dipilih dan siap diunggah.</p></div>`;
+      lucide.createIcons();
     } else {
       previewBox.innerHTML = `<div class="text-center text-muted">Format file .${ext} tidak didukung untuk preview.</div>`;
     }
@@ -669,6 +693,27 @@ async function loadDokumenData() {
   }
 }
 
+async function loadProposalCategoriesDropdown(selectId) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  
+  const currentVal = select.value;
+  select.innerHTML = `<option value="" disabled selected>Pilih kategori...</option>`;
+  
+  try {
+    const cats = await fetchProposalCategories();
+    cats.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.name;
+      opt.innerText = `${cat.name} (${cat.code})`;
+      select.appendChild(opt);
+    });
+    if (currentVal) select.value = currentVal;
+  } catch (e) {
+    console.error('Gagal memuat kategori proposal:', e);
+  }
+}
+
 function resetDokumenModal() {
   editingDokumenId = null;
   editingDokumenFilePath = null;
@@ -681,15 +726,19 @@ function resetDokumenModal() {
   if (previewBox) previewBox.innerHTML = '<p class="text-muted">Preview akan muncul setelah memilih file.</p>';
 }
 
-function openDokumenModal(id = null) {
+async function openDokumenModal(id = null) {
   resetDokumenModal();
   const modal = document.getElementById('modal-dokumen');
   if (!modal) return;
 
+  // Load kategori dari Firestore terlebih dahulu
+  await loadProposalCategoriesDropdown('doc-category');
+
   if (id) {
     editingDokumenId = id;
     document.getElementById('modal-dokumen-title').innerText = 'Edit Dokumen Magang';
-    db.collection('dokumen_magang').doc(id).get().then(doc => {
+    try {
+      const doc = await db.collection('dokumen_magang').doc(id).get();
       if (!doc.exists) return;
       const data = doc.data();
       document.getElementById('doc-title').value = data.title || '';
@@ -702,9 +751,9 @@ function openDokumenModal(id = null) {
       editingDokumenFileType = data.fileType || null;
 
       showFilePreview(editingDokumenFilePath, editingDokumenFileName, 'doc-file-upload-preview');
-    }).catch(err => {
+    } catch (err) {
       console.error('Gagal memuat data dokumen untuk edit:', err);
-    });
+    }
   }
 
   modal.classList.add('active');
@@ -1888,6 +1937,103 @@ async function loadLetterCategoriesDatalist() {
   }
 }
 
+
+// ==========================================
+// 6d. KATEGORI PROPOSAL (DOKUMEN MAGANG) SETTINGS LOGIC
+// ==========================================
+let cachedProposalCategories = [];
+
+async function fetchProposalCategories() {
+  try {
+    const snap = await db.collection('proposal_categories').get();
+    cachedProposalCategories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return cachedProposalCategories;
+  } catch(e) {
+    return [];
+  }
+}
+
+async function loadKategoriProposalData() {
+  const categories = await fetchProposalCategories();
+  const tbody = document.getElementById('table-kategori-proposal-body');
+  tbody.innerHTML = '';
+
+  if (categories.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" class="text-center">Belum ada kategori proposal terdaftar.</td></tr>`;
+    return;
+  }
+
+  categories.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="bold">${c.name}</td>
+      <td><span class="badge badge-status-sent">${c.code}</span></td>
+      <td class="actions-column">
+        <div class="action-buttons-group">
+          <button class="btn-icon-only" onclick="editKategoriProposal('${c.id}', '${c.name.replace(/'/g, "\\'")}', '${c.code}')" title="Edit Kategori">
+            <i data-lucide="edit-2"></i>
+          </button>
+          <button class="btn-icon-only delete" onclick="deleteKategoriProposal('${c.id}')" title="Hapus Kategori">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  lucide.createIcons();
+}
+
+async function handleKategoriProposalSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById('kat-proposal-id').value;
+  const name = document.getElementById('kat-proposal-name').value;
+  const code = document.getElementById('kat-proposal-code').value.toUpperCase();
+
+  try {
+    if (id) {
+      await db.collection('proposal_categories').doc(id).update({ name, code });
+    } else {
+      await db.collection('proposal_categories').add({ name, code });
+    }
+    resetKategoriProposalForm();
+    loadKategoriProposalData();
+    alert("Kategori proposal berhasil disimpan!");
+  } catch(err) {
+    console.error("Gagal menyimpan kategori proposal:", err);
+    alert("Gagal menyimpan kategori proposal: " + err.message);
+  }
+}
+
+function editKategoriProposal(id, name, code) {
+  document.getElementById('kat-proposal-id').value = id;
+  document.getElementById('kat-proposal-name').value = name;
+  document.getElementById('kat-proposal-code').value = code;
+
+  document.getElementById('kat-proposal-form-title').innerText = 'Edit Kategori Proposal';
+  document.getElementById('btn-cancel-kat-proposal').classList.remove('hidden');
+}
+
+async function deleteKategoriProposal(id) {
+  if (!confirm('Hapus kategori proposal ini? Data dokumen magang lama tidak akan terganggu.')) return;
+  try {
+    await db.collection('proposal_categories').doc(id).delete();
+    loadKategoriProposalData();
+  } catch(e) {
+    console.error("Gagal menghapus kategori proposal:", e);
+    alert("Gagal menghapus kategori proposal: " + e.message);
+  }
+}
+
+function resetKategoriProposalForm() {
+  document.getElementById('kat-proposal-id').value = '';
+  document.getElementById('kat-proposal-name').value = '';
+  document.getElementById('kat-proposal-code').value = '';
+  document.getElementById('kat-proposal-form-title').innerText = 'Tambah Kategori Proposal';
+  document.getElementById('btn-cancel-kat-proposal').classList.add('hidden');
+}
+
 async function ensureLetterCategoryExists(catNameOrCode) {
   if (!catNameOrCode) return null;
   const valTrimmed = catNameOrCode.trim();
@@ -2159,6 +2305,7 @@ function showFilePreview(filePath, fileName, previewBoxId) {
 
   const isImage = ['jpg','jpeg','png','gif','svg','webp'].includes(ext);
   const isPdf = ext === 'pdf' || filePath.toLowerCase().includes('pdf') || (fileName && fileName.toLowerCase().includes('pdf'));
+  const isZip = ['zip', 'rar', '7z', 'gz', 'tar'].includes(ext);
 
   if (isPdf) {
     previewBox.innerHTML = `
@@ -2170,6 +2317,9 @@ function showFilePreview(filePath, fileName, previewBoxId) {
     `;
   } else if (isImage) {
     previewBox.innerHTML = `<img src="${filePath}" alt="Preview Gambar">`;
+  } else if (isZip) {
+    previewBox.innerHTML = `<div class="text-center text-muted"><i data-lucide="file-archive" style="width:36px;height:36px;color:var(--primary-color);"></i><p class="mt-2">File arsip <strong>.${ext}</strong> — klik tombol <strong>Unduh</strong> atau <strong>Buka di Tab Baru</strong> untuk mengunduh.</p></div>`;
+    lucide.createIcons();
   } else {
     previewBox.innerHTML = `<div class="text-center text-muted">Format file .${ext} tidak didukung untuk preview.</div>`;
   }
@@ -2200,6 +2350,7 @@ function previewFile(filePath, documentName, fileName = '') {
   
   const isImage = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext);
   const isPdf = ext === 'pdf' || filePath.toLowerCase().includes('pdf') || (fileName && fileName.toLowerCase().includes('pdf'));
+  const isZip = ['zip', 'rar', '7z', 'gz', 'tar'].includes(ext);
 
   if (isPdf) {
     contentBox.innerHTML = `
@@ -2214,6 +2365,15 @@ function previewFile(filePath, documentName, fileName = '') {
     `;
   } else if (isImage) {
     contentBox.innerHTML = `<img src="${filePath}" alt="${documentName}">`;
+  } else if (isZip) {
+    contentBox.innerHTML = `
+      <div class="text-center p-4">
+        <i data-lucide="file-archive" style="width:48px; height:48px; color:var(--primary-color);"></i>
+        <p class="mt-2">File arsip <strong>.${ext}</strong></p>
+        <p class="text-muted">File ini tidak dapat di-preview secara langsung. Silakan gunakan tombol unduh atau buka di tab baru untuk mengunduh.</p>
+      </div>
+    `;
+    lucide.createIcons();
   } else {
     contentBox.innerHTML = `
       <div class="text-center p-4">

@@ -115,6 +115,10 @@
           <i data-lucide="tag"></i>
           <span>Kategori Surat</span>
         </a>
+        <a href="#" class="nav-item" data-page="kategori-proposal">
+          <i data-lucide="file-stack"></i>
+          <span>Kategori Proposal</span>
+        </a>
         <a href="#" class="nav-item" data-page="klien">
           <i data-lucide="users"></i>
           <span>Daftar Klien</span>
@@ -364,15 +368,12 @@
                 <label for="doc-category">Kategori Dokumen <span class="required">*</span></label>
                 <select id="doc-category" required>
                   <option value="" disabled selected>Pilih kategori...</option>
-                  <option value="Laporan">Laporan</option>
-                  <option value="Proposal">Proposal</option>
-                  <option value="Sertifikat">Sertifikat</option>
                 </select>
               </div>
               <div class="form-group">
-                <label for="doc-file-upload">Unggah File Dokumen (PDF / Gambar)</label>
-                <input type="file" id="doc-file-upload" accept="application/pdf,image/*">
-                <small class="form-help">Unggah file PDF atau gambar untuk dokumen magang.</small>
+                <label for="doc-file-upload">Unggah File Dokumen (PDF / Gambar / ZIP)</label>
+                <input type="file" id="doc-file-upload" accept="application/pdf,image/*,.zip,.rar,.7z,.tar,.gz">
+                <small class="form-help">Unggah file PDF, gambar, atau arsip ZIP untuk dokumen magang.</small>
                 <div class="file-input-preview" id="doc-file-upload-preview">Preview akan muncul setelah memilih file.</div>
               </div>
               <div class="modal-footer" style="justify-content: flex-start; gap: 10px; padding: 0;">
@@ -655,6 +656,57 @@
                     </tr>
                   </thead>
                   <tbody id="table-kategori-surat-body">
+                    <tr><td colspan="3" class="text-center">Memuat kategori...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             KATEGORI PROPOSAL SETTINGS PAGE
+             ========================================== -->
+        <section id="page-kategori-proposal" class="page-section">
+          <div class="split-layout">
+            <div class="form-card">
+              <div class="card-header">
+                <h3 id="kat-proposal-form-title">Tambah Kategori Proposal</h3>
+                <p>Kelola kategori untuk dokumen magang (misal: Laporan, Proposal, Sertifikat)</p>
+              </div>
+              <form id="form-kategori-proposal" class="classic-form">
+                <input type="hidden" id="kat-proposal-id">
+                <div class="form-group">
+                  <label for="kat-proposal-name">Nama Kategori <span class="required">*</span></label>
+                  <input type="text" id="kat-proposal-name" placeholder="Contoh: Laporan Magang" required>
+                </div>
+                <div class="form-group">
+                  <label for="kat-proposal-code">Kode Singkatan <span class="required">*</span></label>
+                  <input type="text" id="kat-proposal-code" placeholder="Contoh: LAP" style="text-transform: uppercase;" maxlength="10" required>
+                  <small class="form-help">Kode singkatan untuk keperluan penomoran.</small>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn btn-outline hidden" id="btn-cancel-kat-proposal">Batal</button>
+                  <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Simpan Kategori</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="table-card">
+              <div class="card-header">
+                <h3>Daftar Kategori Proposal</h3>
+                <p>Seluruh kategori dokumen magang terdaftar</p>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nama Kategori</th>
+                      <th>Kode Singkatan</th>
+                      <th class="actions-column">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-kategori-proposal-body">
                     <tr><td colspan="3" class="text-center">Memuat kategori...</td></tr>
                   </tbody>
                 </table>
