@@ -77,6 +77,10 @@ let editingDokumenId = null;
 let editingDokumenFilePath = null;
 let editingDokumenFileName = null;
 let editingDokumenFileType = null;
+let editingDokumenHexaId = null;
+let editingDokumenHexaFilePath = null;
+let editingDokumenHexaFileName = null;
+let editingDokumenHexaFileType = null;
 
 // AUTHENTICATION LOGIC
 function checkAuth() {
@@ -308,6 +312,8 @@ function switchPage(pageId) {
     loadQuotationData();
   } else if (pageId === 'invoicing') {
     loadInvoiceData();
+  } else if (pageId === 'dokumen-hexa') {
+    loadDokumenHexaData();
   } else if (pageId === 'dokumen') {
     loadDokumenData();
   } else if (pageId === 'unit') {
@@ -348,6 +354,8 @@ function setupEventListeners() {
   
   // Form Dokumen Magang
   document.getElementById('form-tambah-dokumen').addEventListener('submit', handleTambahDokumenSubmit);
+  // Form Dokumen Hexa
+  document.getElementById('form-tambah-dokumen-hexa').addEventListener('submit', handleTambahDokumenHexaSubmit);
   setupFilePreviewListener('doc-file-upload', 'doc-file-upload-preview');
 
   // Copy Number Button
@@ -664,7 +672,7 @@ async function loadDokumenData() {
     tbody.innerHTML = '';
 
     if (snap.empty) {
-      tbody.innerHTML = `<tr><td colspan="6" class="text-center">Belum ada dokumen magang.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center">Belum ada dokumen magang.</td></tr>`;
       return;
     }
 
@@ -680,9 +688,7 @@ async function loadDokumenData() {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${item.title || '-'}</td>
-        <td>${item.participant || '-'}</td>
-        <td>${item.school || '-'}</td>
-        <td>${item.period || '-'}</td>
+        <td>${item.uploader || item.participant || '-'}</td>
         <td>${item.category || '-'}</td>
         <td class="actions-column">${actionCell}</td>
       `;
@@ -692,6 +698,42 @@ async function loadDokumenData() {
     lucide.createIcons();
   } catch (err) {
     console.error('Gagal memuat data dokumen magang:', err);
+  }
+}
+
+async function loadDokumenHexaData() {
+  try {
+    const snap = await db.collection('dokumen_hexa').orderBy('createdAt', 'desc').get();
+    const tbody = document.getElementById('table-dokumen-hexa-body');
+    tbody.innerHTML = '';
+
+    if (snap.empty) {
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center">Belum ada dokumen Hexa.</td></tr>`;
+      return;
+    }
+
+    snap.forEach(doc => {
+      const item = doc.data();
+      const actionCell = `
+        <div class="action-buttons-group">
+          ${item.filePath ? `<button class="btn btn-icon-only" onclick="previewFile('${item.filePath}', '${item.title || 'Dokumen'}', '${item.fileName || ''}')" title="View Dokumen"><i data-lucide="eye"></i></button>` : ''}
+          <button class="btn btn-icon-only" onclick="openDokumenHexaModal('${doc.id}')" title="Edit Dokumen"><i data-lucide="edit-2"></i></button>
+          <button class="btn btn-icon-only delete" onclick="deleteDokumenHexa('${doc.id}')" title="Hapus Dokumen"><i data-lucide="trash-2"></i></button>
+        </div>
+      `;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.title || '-'}</td>
+        <td>${item.uploader || '-'}</td>
+        <td>${item.category || '-'}</td>
+        <td class="actions-column">${actionCell}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    lucide.createIcons();
+  } catch (err) {
+    console.error('Gagal memuat data dokumen Hexa:', err);
   }
 }
 
@@ -712,7 +754,7 @@ async function loadProposalCategoriesDropdown(selectId) {
     });
     if (currentVal) select.value = currentVal;
   } catch (e) {
-    console.error('Gagal memuat kategori proposal:', e);
+    console.error('Gagal memuat kategori dokumen:', e);
   }
 }
 
@@ -733,7 +775,6 @@ async function openDokumenModal(id = null) {
   const modal = document.getElementById('modal-dokumen');
   if (!modal) return;
 
-  // Load kategori dari Firestore terlebih dahulu
   await loadProposalCategoriesDropdown('doc-category');
 
   if (id) {
@@ -744,9 +785,7 @@ async function openDokumenModal(id = null) {
       if (!doc.exists) return;
       const data = doc.data();
       document.getElementById('doc-title').value = data.title || '';
-      document.getElementById('doc-participant').value = data.participant || '';
-      document.getElementById('doc-school').value = data.school || '';
-      document.getElementById('doc-period').value = data.period || '';
+      document.getElementById('doc-uploader').value = data.uploader || data.participant || '';
       document.getElementById('doc-category').value = data.category || '';
       editingDokumenFilePath = data.filePath || null;
       editingDokumenFileName = data.fileName || null;
@@ -759,6 +798,54 @@ async function openDokumenModal(id = null) {
   }
 
   modal.classList.add('active');
+}
+
+function resetDokumenHexaModal() {
+  editingDokumenHexaId = null;
+  editingDokumenHexaFilePath = null;
+  editingDokumenHexaFileName = null;
+  editingDokumenHexaFileType = null;
+  const form = document.getElementById('form-tambah-dokumen-hexa');
+  form.reset();
+  document.getElementById('modal-dokumen-hexa-title').innerText = 'Tambah Dokumen Hexa';
+  const previewBox = document.getElementById('doc-hexa-file-upload-preview');
+  if (previewBox) previewBox.innerHTML = '<p class="text-muted">Preview akan muncul setelah memilih file.</p>';
+}
+
+async function openDokumenHexaModal(id = null) {
+  resetDokumenHexaModal();
+  const modal = document.getElementById('modal-dokumen-hexa');
+  if (!modal) return;
+
+  await loadProposalCategoriesDropdown('doc-hexa-category');
+
+  if (id) {
+    editingDokumenHexaId = id;
+    document.getElementById('modal-dokumen-hexa-title').innerText = 'Edit Dokumen Hexa';
+    try {
+      const doc = await db.collection('dokumen_hexa').doc(id).get();
+      if (!doc.exists) return;
+      const data = doc.data();
+      document.getElementById('doc-hexa-title').value = data.title || '';
+      document.getElementById('doc-hexa-uploader').value = data.uploader || '';
+      document.getElementById('doc-hexa-category').value = data.category || '';
+      editingDokumenHexaFilePath = data.filePath || null;
+      editingDokumenHexaFileName = data.fileName || null;
+      editingDokumenHexaFileType = data.fileType || null;
+
+      showFilePreview(editingDokumenHexaFilePath, editingDokumenHexaFileName, 'doc-hexa-file-upload-preview');
+    } catch (err) {
+      console.error('Gagal memuat data dokumen Hexa untuk edit:', err);
+    }
+  }
+
+  modal.classList.add('active');
+}
+
+function closeDokumenHexaModal() {
+  const modal = document.getElementById('modal-dokumen-hexa');
+  if (modal) modal.classList.remove('active');
+  resetDokumenHexaModal();
 }
 
 function closeDokumenModal() {
@@ -779,18 +866,28 @@ async function deleteDokumen(id) {
   }
 }
 
+async function deleteDokumenHexa(id) {
+  if (!confirm('Apakah Anda yakin ingin menghapus dokumen Hexa ini?')) return;
+  try {
+    await db.collection('dokumen_hexa').doc(id).delete();
+    loadDokumenHexaData();
+    alert('Dokumen Hexa berhasil dihapus.');
+  } catch (err) {
+    console.error('Gagal menghapus dokumen Hexa:', err);
+    alert('Gagal menghapus dokumen. Silakan coba lagi.');
+  }
+}
+
 async function handleTambahDokumenSubmit(e) {
   e.preventDefault();
 
   const title = document.getElementById('doc-title').value.trim();
-  const participant = document.getElementById('doc-participant').value.trim();
-  const school = document.getElementById('doc-school').value.trim();
-  const period = document.getElementById('doc-period').value.trim();
+  const uploader = document.getElementById('doc-uploader').value.trim();
   const category = document.getElementById('doc-category').value;
   const fileInput = document.getElementById('doc-file-upload');
   const file = fileInput ? fileInput.files[0] : null;
 
-  if (!title || !participant || !school || !period || !category) {
+  if (!title || !uploader || !category) {
     alert('Semua field wajib diisi sebelum menyimpan dokumen.');
     return;
   }
@@ -798,9 +895,7 @@ async function handleTambahDokumenSubmit(e) {
   try {
     const docData = {
       title,
-      participant,
-      school,
-      period,
+      uploader,
       category,
       createdAt: new Date().toISOString()
     };
@@ -829,6 +924,56 @@ async function handleTambahDokumenSubmit(e) {
     alert('Data dokumen magang berhasil disimpan.');
   } catch (err) {
     console.error('Gagal menyimpan dokumen magang:', err);
+    alert('Terjadi kesalahan saat menyimpan data. Coba lagi nanti.');
+  }
+}
+
+async function handleTambahDokumenHexaSubmit(e) {
+  e.preventDefault();
+
+  const title = document.getElementById('doc-hexa-title').value.trim();
+  const uploader = document.getElementById('doc-hexa-uploader').value.trim();
+  const category = document.getElementById('doc-hexa-category').value;
+  const fileInput = document.getElementById('doc-hexa-file-upload');
+  const file = fileInput ? fileInput.files[0] : null;
+
+  if (!title || !uploader || !category) {
+    alert('Semua field wajib diisi sebelum menyimpan dokumen Hexa.');
+    return;
+  }
+
+  try {
+    const docData = {
+      title,
+      uploader,
+      category,
+      createdAt: new Date().toISOString()
+    };
+
+    if (file) {
+      const uploadResult = await uploadToCloudinary(file, 'dokumen_hexa');
+      docData.filePath = uploadResult.url;
+      docData.fileName = uploadResult.name;
+      docData.fileType = file.type;
+    } else if (editingDokumenHexaId && editingDokumenHexaFilePath) {
+      docData.filePath = editingDokumenHexaFilePath;
+      docData.fileName = editingDokumenHexaFileName;
+      docData.fileType = editingDokumenHexaFileType;
+    }
+
+    if (editingDokumenHexaId) {
+      await db.collection('dokumen_hexa').doc(editingDokumenHexaId).update(docData);
+      editingDokumenHexaId = null;
+    } else {
+      await db.collection('dokumen_hexa').add(docData);
+    }
+
+    document.getElementById('form-tambah-dokumen-hexa').reset();
+    closeDokumenHexaModal();
+    loadDokumenHexaData();
+    alert('Data dokumen Hexa berhasil disimpan.');
+  } catch (err) {
+    console.error('Gagal menyimpan dokumen Hexa:', err);
     alert('Terjadi kesalahan saat menyimpan data. Coba lagi nanti.');
   }
 }

@@ -79,6 +79,10 @@
           <i data-lucide="hash"></i>
           <span>Generator Nomor</span>
         </a>
+        <a href="#" class="nav-item" data-page="dokumen-hexa">
+          <i data-lucide="file-text"></i>
+          <span>Dokumen Hexa</span>
+        </a>
         <a href="#" class="nav-item" data-page="dokumen">
           <i data-lucide="file-text"></i>
           <span>Dokumen Magang</span>
@@ -117,7 +121,7 @@
         </a>
         <a href="#" class="nav-item" data-page="kategori-proposal">
           <i data-lucide="file-stack"></i>
-          <span>Kategori Proposal</span>
+          <span>Kategori Dokumen</span>
         </a>
         <a href="#" class="nav-item" data-page="klien">
           <i data-lucide="users"></i>
@@ -308,6 +312,73 @@
         </section>
 
         <!-- ==========================================
+             DOKUMEN HEXA PAGE
+             ========================================== -->
+        <section id="page-dokumen-hexa" class="page-section">
+          <div class="page-action-header">
+            <div>
+              <h3>Dokumen Hexa</h3>
+              <p>Dokumen yang tersimpan untuk kebutuhan HEXA.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openDokumenHexaModal()"><i data-lucide="plus"></i> Tambah Dokumen Hexa</button>
+          </div>
+
+          <div class="table-card mt-4">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nama Dokumen</th>
+                    <th>Pengunggah</th>
+                    <th>Kategori</th>
+                    <th class="actions-column">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-dokumen-hexa-body">
+                  <tr><td colspan="4" class="text-center">Belum ada dokumen Hexa.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <div class="modal" id="modal-dokumen-hexa">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 id="modal-dokumen-hexa-title">Tambah Dokumen Hexa</h3>
+              <button class="modal-close" onclick="closeDokumenHexaModal()"><i data-lucide="x"></i></button>
+            </div>
+            <form id="form-tambah-dokumen-hexa" class="classic-form" enctype="multipart/form-data">
+              <input type="hidden" id="dokumen-hexa-id">
+              <div class="form-group">
+                <label for="doc-hexa-title">Nama Dokumen <span class="required">*</span></label>
+                <input type="text" id="doc-hexa-title" placeholder="Contoh: Dokumen Internal HEXA" required>
+              </div>
+              <div class="form-group">
+                <label for="doc-hexa-uploader">Pengunggah <span class="required">*</span></label>
+                <input type="text" id="doc-hexa-uploader" placeholder="Contoh: Admin HEXA" required>
+              </div>
+              <div class="form-group">
+                <label for="doc-hexa-category">Kategori Dokumen <span class="required">*</span></label>
+                <select id="doc-hexa-category" required>
+                  <option value="" disabled selected>Pilih kategori...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="doc-hexa-file-upload">Unggah File Dokumen (PDF / Gambar / ZIP)</label>
+                <input type="file" id="doc-hexa-file-upload" accept="application/pdf,image/*,.zip,.rar,.7z,.tar,.gz">
+                <small class="form-help">Unggah file PDF, gambar, atau arsip ZIP untuk dokumen HEXA.</small>
+                <div class="file-input-preview" id="doc-hexa-file-upload-preview">Preview akan muncul setelah memilih file.</div>
+              </div>
+              <div class="modal-footer" style="justify-content: flex-start; gap: 10px; padding: 0;">
+                <button type="button" class="btn btn-outline" onclick="closeDokumenHexaModal()">Batal</button>
+                <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Simpan Data</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- ==========================================
              DOKUMEN MAGANG PAGE
              ========================================== -->
         <section id="page-dokumen" class="page-section">
@@ -325,15 +396,13 @@
                 <thead>
                   <tr>
                     <th>Nama Dokumen</th>
-                    <th>Nama Peserta</th>
-                    <th>Asal Sekolah</th>
-                    <th>Periode</th>
+                    <th>Pengunggah</th>
                     <th>Kategori</th>
                     <th class="actions-column">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="table-dokumen-body">
-                  <tr><td colspan="6" class="text-center">Belum ada dokumen magang.</td></tr>
+                  <tr><td colspan="4" class="text-center">Belum ada dokumen magang.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -353,16 +422,8 @@
                 <input type="text" id="doc-title" placeholder="Contoh: Laporan Magang" required>
               </div>
               <div class="form-group">
-                <label for="doc-participant">Nama Peserta Magang <span class="required">*</span></label>
-                <input type="text" id="doc-participant" placeholder="Contoh: Budi Santoso" required>
-              </div>
-              <div class="form-group">
-                <label for="doc-school">Asal Sekolah <span class="required">*</span></label>
-                <input type="text" id="doc-school" placeholder="Contoh: SMK Negeri 1 Jakarta" required>
-              </div>
-              <div class="form-group">
-                <label for="doc-period">Periode Magang <span class="required">*</span></label>
-                <input type="text" id="doc-period" placeholder="Contoh: Januari - Maret 2026" required>
+                <label for="doc-uploader">Pengunggah <span class="required">*</span></label>
+                <input type="text" id="doc-uploader" placeholder="Contoh: Budi Santoso" required>
               </div>
               <div class="form-group">
                 <label for="doc-category">Kategori Dokumen <span class="required">*</span></label>
@@ -671,8 +732,8 @@
           <div class="split-layout">
             <div class="form-card">
               <div class="card-header">
-                <h3 id="kat-proposal-form-title">Tambah Kategori Proposal</h3>
-                <p>Kelola kategori untuk dokumen magang (misal: Laporan, Proposal, Sertifikat)</p>
+                <h3 id="kat-proposal-form-title">Tambah Kategori Dokumen</h3>
+                <p>Kelola kategori untuk dokumen magang dan dokumen HEXA (misal: Laporan, Proposal, Sertifikat, Materi)</p>
               </div>
               <form id="form-kategori-proposal" class="classic-form">
                 <input type="hidden" id="kat-proposal-id">
@@ -694,8 +755,8 @@
 
             <div class="table-card">
               <div class="card-header">
-                <h3>Daftar Kategori Proposal</h3>
-                <p>Seluruh kategori dokumen magang terdaftar</p>
+                <h3>Daftar Kategori Dokumen</h3>
+                <p>Seluruh kategori dokumen terdaftar</p>
               </div>
               <div class="table-container">
                 <table class="data-table">
