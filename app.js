@@ -253,16 +253,18 @@ async function initializeFirebaseDb() {
       }
     }
 
-    // 6. Inisialisasi Kategori Proposal (dokumen magang) jika kosong
+    // 6. Inisialisasi Kategori Proposal (dokumen magang)
     const proposalCatsSnap = await db.collection('proposal_categories').get();
-    if (proposalCatsSnap.empty) {
-      const defaultProposalCats = [
-        { name: 'Laporan', code: 'LAP' },
-        { name: 'Proposal', code: 'PRO' },
-        { name: 'Sertifikat', code: 'SRT' },
-        { name: 'Source Code', code: 'SRC' }
-      ];
-      for (const cat of defaultProposalCats) {
+    const existingProposalCatNames = proposalCatsSnap.docs.map(doc => (doc.data().name || '').toLowerCase());
+    const defaultProposalCats = [
+      { name: 'Laporan', code: 'LAP' },
+      { name: 'Proposal', code: 'PRO' },
+      { name: 'Sertifikat', code: 'SRT' },
+      { name: 'Source Code', code: 'SRC' },
+      { name: 'Materi', code: 'MAT' }
+    ];
+    for (const cat of defaultProposalCats) {
+      if (!existingProposalCatNames.includes(cat.name.toLowerCase())) {
         await db.collection('proposal_categories').add(cat);
       }
     }
